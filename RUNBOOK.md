@@ -66,9 +66,27 @@ journalctl -u gpuchain-backup.service -n 10 --no-pager
 
 Money is never in the database: balances live in the escrow contract, so a restore can't lose or create funds.
 
-## Deploying the web app
+## Deploying: automatic, from main
 
-The deploy script rebuilds both web apps from a source archive, keeps the previous build outside the app, restarts only after a successful build, and rolls back if the build fails. It refuses to touch anything when a build fails, so the running site stays up.
+Merging into `main` deploys itself. Every 5 minutes `gpuchain-autodeploy.timer` runs `/opt/gpuchain-ops/gpuchain-autodeploy.sh` (source: `infra/gcp/ops/`), which:
+
+1. Reads the newest commit on `main` and its CI check runs, anonymously (the repo is public; GitHub holds no credential for this server).
+2. Waits while CI runs, and refuses a commit whose CI failed.
+3. Compares the new source with what is running, file by file, and deploys only what changed:
+   - **Python services:** waits while any job is unfinished, backs up the running code, swaps it, restarts, and puts the old code back if `/readyz` isn't ready within a minute.
+   - **Web apps:** `gpuchain-web-deploy.sh` rebuilds both, keeping the previous build and restoring it if a build fails.
+4. Refuses dependency changes (`package-lock.json`, `pyproject.toml`); deploy those by hand.
+5. Publishes the running commit at `https://gpuchain.duckdns.org/deploy/version.json` (plus `failed_sha` and the reason when a deploy is refused).
+
+The **Deploy** workflow in GitHub Actions waits for that file to show the merged commit, then checks `/readyz` and the main pages; it fails, and GitHub emails you, if the server refused the deploy.
+
+```bash
+sudo DRY_RUN=1 bash /opt/gpuchain-ops/gpuchain-autodeploy.sh   # what would happen, changing nothing
+journalctl -u gpuchain-autodeploy.service -n 30 --no-pager     # the last runs
+sudo rm /var/lib/gpuchain-autodeploy/failed                    # retry a refused commit after fixing the cause
+```
+
+Installed once with `sudo bash infra/gcp/ops/install-autodeploy.sh <sha already running>`.
 
 ## Restarting the VM
 
