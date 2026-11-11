@@ -75,7 +75,7 @@ Merging into `main` deploys itself. Every 5 minutes `gpuchain-autodeploy.timer` 
 3. Compares the new source with what is running, file by file, and deploys only what changed:
    - **Python services:** waits while any job is unfinished, backs up the running code, swaps it, restarts, and puts the old code back if `/readyz` isn't ready within a minute.
    - **Web apps:** `gpuchain-web-deploy.sh` rebuilds both, keeping the previous build and restoring it if a build fails.
-4. Refuses dependency changes (`package-lock.json`, `pyproject.toml`); deploy those by hand.
+4. Installs web dependency changes with `npm ci` (CI has already built with the new lockfile), keeping the old `node_modules` to put back if anything fails. Python dependency changes (`pyproject.toml`) are refused; deploy those by hand.
 5. Publishes the running commit at `https://gpuchain.duckdns.org/deploy/version.json` (plus `failed_sha` and the reason when a deploy is refused).
 
 The **Deploy** workflow in GitHub Actions waits for that file to show the merged commit, then checks `/readyz` and the main pages; it fails, and GitHub emails you, if the server refused the deploy.
