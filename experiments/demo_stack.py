@@ -95,8 +95,9 @@ def start_job_helper(port: int, budget: int) -> None:
         def _reply(self, status: int) -> None:
             self.send_response(status)
             origin = self.headers.get("Origin", "")
-            if origin in allowed:
-                self.send_header("Access-Control-Allow-Origin", origin)
+            match = next((a for a in allowed if a == origin), None)
+            if match:
+                self.send_header("Access-Control-Allow-Origin", match)
             self.end_headers()
 
         def do_POST(self):

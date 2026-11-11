@@ -74,6 +74,7 @@ def main():
             spec = with_fee(json.loads(args.spec.read_text(encoding="utf-8")))
             policy = json.loads(args.policy.read_text(encoding="utf-8"))
             budget_text = args.budget
+            budget = None
             if args.command == "request":
                 try:
                     budget = Decimal(args.budget)
