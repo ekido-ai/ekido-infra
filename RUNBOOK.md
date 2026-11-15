@@ -74,6 +74,17 @@ Limits, set in `/etc/ekido/coordinator.env`:
 - `MAX_JOB_STORAGE_BYTES` (default 5 GiB) caps the checkpoint bytes one job keeps. A commit over it is refused with `STORAGE_QUOTA`.
 - `MAX_PENDING_UPLOAD_BYTES` (default 2 GiB) caps what one provider may upload before a checkpoint commit references it. Over it, the upload gets HTTP 413.
 
+### Direct uploads to S3
+
+With `/etc/ekido/storage.env` (`ARTIFACT_S3_BUCKET`, `ARTIFACT_S3_REGION`; written by `restore.sh <backup-bucket> <checkpoint-bucket>`), workers move checkpoint blobs straight to and from the private bucket `ekido-checkpoints-<account>`, under `blobs/<sha256>`:
+
+- A worker asks `POST /artifacts/<sha256>/upload-url` (with its token and the size) and gets a 15-minute presigned PUT. The link is signed with the blob's SHA-256, and S3 refuses any other content (`BadDigest`). The pending-upload cap is counted when the link is issued.
+- `GET /artifacts/<sha256>/download-url` gives a presigned GET. Downloads are verified against the hash on the worker either way.
+- Older provider kits, and blobs already on the server's disk, keep using `PUT`/`GET /artifacts/<sha256>`. The coordinator streams a bucket blob to an older worker that asks for it.
+- Retention applies the same rules to the bucket. Quarantine there is `quarantine/<date>/`, which a bucket lifecycle rule empties after 30 days. The server's role (`ekido-checkpoints` inline policy) can delete only under `blobs/`, never under `quarantine/`.
+
+Without `storage.env`, everything stays on the server's disk as before.
+
 ## Restoring
 
 1. Stop the coordinator: `sudo systemctl stop ekido-coordinator`.

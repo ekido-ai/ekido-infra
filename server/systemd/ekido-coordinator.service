@@ -13,6 +13,9 @@ Environment=PYTHONPATH=/opt/ekido/apps/coordinator:/opt/ekido/packages/ekido_cor
 Environment=DATABASE_URL=sqlite:////var/lib/ekido-coordinator/jobs.db
 Environment=ARTIFACT_DIR=/var/lib/ekido-coordinator/artifacts
 EnvironmentFile=/etc/ekido/coordinator.env
+# Optional and not secret: the checkpoint bucket for direct uploads (written by restore.sh). The S3 credentials come
+# from the instance role.
+EnvironmentFile=-/etc/ekido/storage.env
 ExecStart=/opt/ekido/venv/bin/python infra/server/sepolia_coordinator.py
 Restart=on-failure
 RestartSec=15

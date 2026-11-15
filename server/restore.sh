@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Puts secrets, data and the escrow ABI on a server built by bootstrap.sh, then starts the services.
 # Run as root (for example through SSM Run Command):
-#   bash restore.sh <bucket>            # data from s3://<bucket>/migration/data.tgz
+#   bash restore.sh <bucket> [checkpoint-bucket]   # data from s3://<bucket>/migration/data.tgz
+# With a checkpoint bucket, workers upload and download checkpoint blobs straight to it (/etc/ekido/storage.env).
 #
 # Inputs, all private:
 #   s3://<bucket>/migration/contracts-out.tgz   the escrow build output (contracts/out) the deployed contract came from
@@ -11,7 +12,8 @@
 # Secrets are written straight to their files with mode 600 and never printed.
 # The smoke provider is not started here: it dials wss://gpuchain.duckdns.org, so it starts once DNS points here.
 set -euo pipefail
-BUCKET="${1:?usage: restore.sh <bucket>}"
+BUCKET="${1:?usage: restore.sh <bucket> [checkpoint-bucket]}"
+CHECKPOINT_BUCKET="${2:-}"
 APP=/opt/ekido
 WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-ap-south-1}"
@@ -46,6 +48,11 @@ if aws ssm get-parameter --name /ekido/server/smoke-provider.key --query Paramet
 fi
 printf 'BACKUP_S3_BUCKET=%s\n' "$BUCKET" > /etc/ekido/backup.env
 chmod 644 /etc/ekido/backup.env
+# Not secret. Read by the coordinator and by retention; without it, blobs stay on the server's disk.
+if [ -n "$CHECKPOINT_BUCKET" ]; then
+  printf 'ARTIFACT_S3_BUCKET=%s\nARTIFACT_S3_REGION=%s\n' "$CHECKPOINT_BUCKET" "$AWS_DEFAULT_REGION" > /etc/ekido/storage.env
+  chmod 644 /etc/ekido/storage.env
+fi
 
 echo "== data"
 systemctl stop ekido-coordinator ekido-verifier@1 ekido-verifier@2 2>/dev/null || true
