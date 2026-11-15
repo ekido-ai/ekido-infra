@@ -56,7 +56,7 @@ def wait(check, timeout: float, every: float = 1.0):
 
 
 def running_containers() -> list[str]:
-    out = subprocess.run(["docker", "ps", "--filter", "name=gpuchain-run-", "--format", "{{.Names}}"], capture_output=True, text=True, check=False).stdout
+    out = subprocess.run(["docker", "ps", "--filter", "name=ekido-run-", "--format", "{{.Names}}"], capture_output=True, text=True, check=False).stdout
     return out.split()
 
 
