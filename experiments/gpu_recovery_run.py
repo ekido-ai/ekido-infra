@@ -70,7 +70,7 @@ def job_spec(args) -> dict:
 def docker_base(args, name: str) -> list[str]:
     return [
         "docker", "run", "--rm", "--name", name, "--gpus", "all",
-        "--label", f"gpuchain.story_owner={args.run_id}",
+        "--label", f"ekido.story_owner={args.run_id}",
         "-v", "gpuchain_hf_cache:/hf_cache", "-v", f"{ROOT}:/app:ro",
         "-e", f"PYTHONPATH={CONTAINER_PATH}", "-e", "PYTHONDONTWRITEBYTECODE=1", "-e", "HF_HUB_OFFLINE=1", "-e", "HF_DATASETS_OFFLINE=1",
         args.image,
@@ -255,7 +255,7 @@ def main() -> None:
         # Never kill other agents' containers. Inspect the owner label before stopping
         # the uniquely named helper containers started by this experiment.
         for name in [f"ekido-evalhash-{args.run_id}", *(f"ekido-verifier-{args.run_id}-{i}" for i in (1, 2))]:
-            owner = subprocess.run(["docker", "inspect", "--format", '{{index .Config.Labels "gpuchain.story_owner"}}', name], capture_output=True, text=True, check=False)
+            owner = subprocess.run(["docker", "inspect", "--format", '{{index .Config.Labels "ekido.story_owner"}}', name], capture_output=True, text=True, check=False)
             if owner.returncode == 0 and owner.stdout.strip() == args.run_id:
                 subprocess.run(["docker", "kill", name], capture_output=True, check=False)
         print("logs in", work, flush=True)
