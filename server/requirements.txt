@@ -71,3 +71,8 @@ jmespath==1.1.0
 python-dateutil==2.9.0.post0
 s3transfer==0.14.0
 six==1.17.0
+# Postgres and its migrations (apps/coordinator/alembic).
+alembic==1.20.1
+Mako==1.4.3
+psycopg==3.3.6
+psycopg-binary==3.3.6

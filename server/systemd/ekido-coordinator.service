@@ -16,6 +16,10 @@ EnvironmentFile=/etc/ekido/coordinator.env
 # Optional and not secret: the checkpoint bucket for direct uploads (written by restore.sh). The S3 credentials come
 # from the instance role.
 EnvironmentFile=-/etc/ekido/storage.env
+# Postgres (written by postgres.sh, mode 600): DATABASE_URL here overrides the SQLite default above, and the schema
+# is migrated before every start. Without the file, nothing changes: SQLite, and tables created by the app.
+EnvironmentFile=-/etc/ekido/database.env
+ExecStartPre=/bin/sh -c '[ -s /etc/ekido/database.env ] || exit 0; cd /opt/ekido/apps/coordinator && exec /opt/ekido/venv/bin/python -m alembic -c alembic.ini upgrade head'
 ExecStart=/opt/ekido/venv/bin/python infra/server/sepolia_coordinator.py
 Restart=on-failure
 RestartSec=15

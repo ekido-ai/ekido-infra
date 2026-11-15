@@ -6,12 +6,21 @@
 # The upload never deletes anything in the bucket; the bucket's own lifecycle rules expire old copies.
 set -euo pipefail
 BACKUP_S3_BUCKET=""   # Amazon S3 bucket name
+DATABASE_URL=""
 [ -f /etc/ekido/backup.env ] && . /etc/ekido/backup.env
+[ -f /etc/ekido/database.env ] && . /etc/ekido/database.env   # Set when the server runs on Postgres (postgres.sh).
 SRC_DB=/var/lib/ekido-coordinator/jobs.db
 SRC_ART=/var/lib/ekido-coordinator/artifacts
 DEST=/var/backups/ekido
 STAMP=$(date -u +%Y%m%d-%H%M%S)
 mkdir -p "$DEST/db" "$DEST/artifacts"
+if [[ "$DATABASE_URL" == postgresql* ]]; then
+  # A consistent dump in Postgres's compressed custom format; pg_restore --list proves it's readable.
+  SNAP="$DEST/db/jobs-$STAMP.pgdump"
+  pg_dump --format=custom --no-owner --file="$SNAP" "${DATABASE_URL/postgresql+psycopg/postgresql}"
+  pg_restore --list "$SNAP" >/dev/null
+else
+SNAP="$DEST/db/jobs-$STAMP.db.gz"
 python3 - "$SRC_DB" "$DEST/db/jobs-$STAMP.db" <<'PY'
 import sqlite3, sys
 src = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
@@ -23,13 +32,14 @@ if ok != "ok":
     raise SystemExit(f"backup failed its integrity check: {ok}")
 PY
 gzip -9 "$DEST/db/jobs-$STAMP.db"
+fi
 # Artifacts are named by their hash and never change, so copying only new files is enough.
 cp -rn "$SRC_ART/." "$DEST/artifacts/" 2>/dev/null || true
-echo "backup ok: $DEST/db/jobs-$STAMP.db.gz ($(du -sh "$DEST" | cut -f1) total)"
+echo "backup ok: $SNAP ($(du -sh "$DEST" | cut -f1) total)"
 if [ -n "$BACKUP_S3_BUCKET" ]; then
   # Each snapshot name is unique (UTC timestamp), so nothing is overwritten. `sync` without --delete only adds
   # new artifacts, which are named by their hash and never change. The instance role must not allow s3:DeleteObject.
-  aws s3 cp "$DEST/db/jobs-$STAMP.db.gz" "s3://$BACKUP_S3_BUCKET/db/"
+  aws s3 cp "$SNAP" "s3://$BACKUP_S3_BUCKET/db/"
   aws s3 sync "$DEST/artifacts" "s3://$BACKUP_S3_BUCKET/artifacts"
-  echo "off-site ok: s3://$BACKUP_S3_BUCKET/db/jobs-$STAMP.db.gz"
+  echo "off-site ok: s3://$BACKUP_S3_BUCKET/db/$(basename "$SNAP")"
 fi

@@ -12,6 +12,8 @@ Environment=DATABASE_URL=sqlite:////var/lib/ekido-coordinator/jobs.db
 Environment=ARTIFACT_DIR=/var/lib/ekido-coordinator/artifacts
 # Optional: the checkpoint bucket, so blobs uploaded straight to S3 follow the same rules.
 EnvironmentFile=-/etc/ekido/storage.env
+# Postgres, when the server uses it (postgres.sh).
+EnvironmentFile=-/etc/ekido/database.env
 # Dry run: it only logs what it would move. After a week of sensible logs, turn it on with a drop-in:
 #   systemctl edit ekido-retention.service   ->   [Service] / ExecStart= / ExecStart=... -m ekido_coordinator.retention --apply
 ExecStart=/opt/ekido/venv/bin/python -m ekido_coordinator.retention
