@@ -16,7 +16,6 @@ from pathlib import Path
 from eth_account import Account
 from web3 import Web3
 
-from gpuchain_core.canonical import document_hash
 from gpuchain_core.payout_terms import job_binding, new_job_ids, provider_quote, workload_hash
 from gpuchain_verifier.evaluate import load_eval_set
 from tests.test_e2e_recovery import PYTHONPATH, ROOT, WALLETS, Cluster, job_spec
