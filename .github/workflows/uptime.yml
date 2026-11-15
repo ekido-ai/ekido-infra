@@ -1,0 +1,34 @@
+name: Uptime
+
+# Checks the live network every 15 minutes. A failure emails the repository's admins, which is the alert:
+# it replaced the Google Cloud uptime checks when the server moved to AWS (15 Nov 2026).
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  live:
+    name: Live network
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: API is ready
+        run: |
+          body=$(curl -sS --max-time 20 --retry 2 --retry-delay 10 https://gpuchain.duckdns.org/sepolia/readyz)
+          echo "$body" | jq -c '{status, failing: [.checks | to_entries[] | select(.value.ok | not) | {(.key): .value.detail}]}'
+          echo "$body" | jq -e '.status == "ready"' >/dev/null
+      - name: Site pages answer
+        run: |
+          for p in / /chain /provide; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 --retry 2 --retry-delay 10 "https://ekido.duckdns.org$p")
+            echo "$p $code"; [ "$code" = 200 ]
+          done

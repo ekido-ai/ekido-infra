@@ -23,7 +23,7 @@ The chain is the ledger for money. The coordinator's database is the orchestrati
 | Verifier | `workers/verifier/` | Claims evaluation tasks with a lease, evaluates in FP32, recomputes payouts, signs EIP-712 verdicts |
 | Contracts | `contracts/` | `GPUChainEscrow` (budgets, verdicts, disputes, refunds, pull payments) and `ProviderRegistry` (providers' own terms) |
 | Web app | `apps/web-combined/` | Landing page, mission control, recovery and quality views, on-chain books, accounts, owner console, provider onboarding |
-| Infra | `infra/` | Provider kit, GCP deployment, backups and monitoring, Docker images, test runners |
+| Infra | `infra/` | Provider kit, server deployment (AWS, earlier GCP), backups and monitoring, Docker images, test runners |
 
 ## Data flow
 
@@ -77,4 +77,4 @@ The full threat model is in [`THREAT_MODEL.md`](THREAT_MODEL.md).
 
 ## Deployment
 
-One Google Cloud VM runs the coordinator, two verifiers, the web app and a CPU provider as systemd units behind Caddy (HTTPS via Let's Encrypt). Operations, backups and alerts are in [`RUNBOOK.md`](RUNBOOK.md).
+One AWS EC2 instance (Mumbai) runs the coordinator, two verifiers, the web app and a CPU provider as systemd units behind Caddy (HTTPS via Let's Encrypt). Operations, backups and alerts are in [`RUNBOOK.md`](RUNBOOK.md).
