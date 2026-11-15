@@ -53,7 +53,7 @@ def main() -> None:
     created = call(base, "POST", "/providers", {"name": args.name, "wallet_address": args.wallet, "kind": "REAL", "capacity_mib": args.capacity_mib, "price_per_step": args.price})
     provider_id = created["provider_id"]
     print(f"Registered {args.name}.\n\nOn the other machine, from the repo root, with the wallet's key in PROVIDER_WALLET_KEY:\n")
-    print(f"  python -m gpuchain_agent.agent --coordinator {coordinator} --provider-id {provider_id} --workdir agent_runs --mode process --device {args.device}\n", flush=True)
+    print(f"  python -m ekido_agent.agent --coordinator {coordinator} --provider-id {provider_id} --workdir agent_runs --mode process --device {args.device}\n", flush=True)
 
     deadline = time.monotonic() + args.wait_seconds
     while next(p for p in call(base, "GET", "/providers") if p["provider_id"] == provider_id)["status"] != "ONLINE":

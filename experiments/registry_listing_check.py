@@ -1,7 +1,7 @@
 """End-to-end check of on-chain provider listing against a throwaway local Anvil chain.
 
 Deploys ProviderRegistry from contracts/out, then lists a provider through the same code the provider kit
-uses (gpuchain_agent.onchain), re-runs it, changes the price, and tries a wallet with no gas.
+uses (ekido_agent.onchain), re-runs it, changes the price, and tries a wallet with no gas.
 Nothing touches Base Sepolia. Run: python experiments/registry_listing_check.py
 """
 from __future__ import annotations
@@ -13,13 +13,13 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path[:0] = [str(ROOT / "packages" / "gpuchain_core"), str(ROOT / "workers" / "agent"), str(ROOT / "workers" / "runtime")]
+sys.path[:0] = [str(ROOT / "packages" / "ekido_core"), str(ROOT / "workers" / "agent"), str(ROOT / "workers" / "runtime")]
 
 from eth_account import Account  # noqa: E402
 from eth_abi import encode  # noqa: E402
 
-from gpuchain_agent.onchain import Rpc, list_on_chain, read_listing, wait_receipt  # noqa: E402
-from gpuchain_core.provider_meta import metadata_hash, provider_metadata  # noqa: E402
+from ekido_agent.onchain import Rpc, list_on_chain, read_listing, wait_receipt  # noqa: E402
+from ekido_core.provider_meta import metadata_hash, provider_metadata  # noqa: E402
 
 ANVIL = ROOT / ".cache" / "foundry" / ("anvil.exe" if sys.platform == "win32" else "anvil")
 PORT = 8547

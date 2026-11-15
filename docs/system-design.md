@@ -1,4 +1,4 @@
-# GPUChain system design
+# Ekido system design
 
 How the whole product is built, where every piece of state lives, what happens when each part fails, and how it scales. Written 9 Nov 2026 from the code as it stands. Measured numbers come from `experiments/results/`; anything else is marked as an estimate.
 
