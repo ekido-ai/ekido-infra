@@ -2,8 +2,8 @@
 
 Nothing is mocked except the workload, which is the CPU synthetic one so this runs without a GPU.
 
-    docker run --rm -v <repo>:/repo -w /repo -e PYTHONPATH=apps/coordinator:packages/gpuchain_core:workers/agent:workers/runtime \
-      gpuchain-test:cpu python -m unittest tests/test_e2e_recovery.py
+    docker run --rm -v <repo>:/repo -w /repo -e PYTHONPATH=apps/coordinator:packages/ekido_core:workers/agent:workers/runtime \
+      ekido-test:cpu python -m unittest tests/test_e2e_recovery.py
 """
 
 import json
@@ -20,11 +20,11 @@ from pathlib import Path
 
 from eth_account import Account
 
-from gpuchain_core.gpck import manifest_hash  # noqa: F401  (import check for the test environment)
-from gpuchain_runtime.synthetic import exec_config, synthetic_spec  # noqa: F401
+from ekido_core.gpck import manifest_hash  # noqa: F401  (import check for the test environment)
+from ekido_runtime.synthetic import exec_config, synthetic_spec  # noqa: F401
 
 ROOT = Path(__file__).resolve().parents[1]
-PYTHONPATH = os.pathsep.join(str(ROOT / p) for p in ("apps/coordinator", "packages/gpuchain_core", "workers/agent", "workers/runtime", "workers/verifier"))
+PYTHONPATH = os.pathsep.join(str(ROOT / p) for p in ("apps/coordinator", "packages/ekido_core", "workers/agent", "workers/runtime", "workers/verifier"))
 WALLETS = {name: "0x" + c * 64 for name, c in (("a", "1"), ("b", "2"), ("c", "3"))}
 
 
@@ -55,7 +55,7 @@ class Cluster(unittest.TestCase):
         self.logs = open(self.root / "server.log", "wb")
         self.addCleanup(self.logs.close)
         self.processes["server"] = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "--factory", "gpuchain_coordinator.main:create_app", "--port", str(self.port), "--log-level", "warning"],
+            [sys.executable, "-m", "uvicorn", "--factory", "ekido_coordinator.main:create_app", "--port", str(self.port), "--log-level", "warning"],
             env=env, stdout=self.logs, stderr=subprocess.STDOUT, cwd=self.root,
         )
         self.wait_for(lambda: self.get("/healthz")["status"] == "ok", "server start", 90)  # Imports are slow when memory is tight.
@@ -115,7 +115,7 @@ class Cluster(unittest.TestCase):
         key = WALLETS[name]
         provider = self.post("/providers", {"name": name, "wallet_address": Account.from_key(key).address, "kind": kind, "capacity_mib": capacity, "price_per_step": price})
         args = [
-            sys.executable, "-m", "gpuchain_agent.agent", "--coordinator", f"ws://127.0.0.1:{self.port}", "--provider-id", provider["provider_id"],
+            sys.executable, "-m", "ekido_agent.agent", "--coordinator", f"ws://127.0.0.1:{self.port}", "--provider-id", provider["provider_id"],
             "--wallet-key", key, "--workdir", str(self.root / f"agent_{name}"), "--mode", "process", "--device", "cpu",
         ]
         if fault:

@@ -19,8 +19,8 @@ from eth_account import Account
 from web3 import Web3
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "packages/gpuchain_core"))
-from gpuchain_core.payout_terms import job_binding, new_job_ids, provider_quote, workload_hash  # noqa: E402
+sys.path.insert(0, str(ROOT / "packages/ekido_core"))
+from ekido_core.payout_terms import job_binding, new_job_ids, provider_quote, workload_hash  # noqa: E402
 LOCAL_CLIENT_KEY = "0x" + "c2" * 32  # Public demo key, for the local chain only.
 LOCAL_PROVIDER_KEYS = {name: "0x" + value * 32 for name, value in {"a": "d1", "b": "d2", "c": "d3", "p": "d4"}.items()}
 LOCAL_PROVIDER_RATES = {"a": "0.001", "b": "0.003", "c": "0.0005", "p": "0.002"}

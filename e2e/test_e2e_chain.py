@@ -2,7 +2,7 @@
 
 Needs the contracts built (`forge build`), web3 in the Python environment, and anvil from
 infra/setup-host.sh or from Docker. From the repo root:
-    set PYTHONPATH=apps/coordinator;packages/gpuchain_core;workers/verifier
+    set PYTHONPATH=apps/coordinator;packages/ekido_core;workers/verifier
     python -m unittest tests/test_e2e_chain.py
 """
 
@@ -19,20 +19,20 @@ from web3 import Web3
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from gpuchain_core.settlement import build_verdict
-from gpuchain_core.signing import order_signatures, sign_document, sign_verdict, verdict_digest
-from gpuchain_core.canonical import document_hash
-from gpuchain_core.payout_terms import job_binding, new_job_ids, provider_quote, workload_hash
-from gpuchain_coordinator.chain import ChainError, EscrowClient
-from gpuchain_coordinator.models import Base, Job
-from gpuchain_coordinator.settlement_service import SettlementService
-from gpuchain_verifier.trusted_chain import ChainReadError, read_chain_context
-from gpuchain_verifier.worker import Verifier, verdict_from_inputs
+from ekido_core.settlement import build_verdict
+from ekido_core.signing import order_signatures, sign_document, sign_verdict, verdict_digest
+from ekido_core.canonical import document_hash
+from ekido_core.payout_terms import job_binding, new_job_ids, provider_quote, workload_hash
+from ekido_coordinator.chain import ChainError, EscrowClient
+from ekido_coordinator.models import Base, Job
+from ekido_coordinator.settlement_service import SettlementService
+from ekido_verifier.trusted_chain import ChainReadError, read_chain_context
+from ekido_verifier.worker import Verifier, verdict_from_inputs
 
 ROOT = Path(__file__).resolve().parents[1]
 PORT = 18545
 RPC = f"http://127.0.0.1:{PORT}"
-ANVIL = "gpuchain-anvil-test"
+ANVIL = "ekido-anvil-test"
 # Anvil's first default account. A public test key with no value anywhere.
 DEPLOYER = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 COORDINATOR, CLIENT, ARBITER = "0x" + "c1" * 32, "0x" + "c2" * 32, "0x" + "c3" * 32

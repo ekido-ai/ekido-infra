@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from eth_account import Account
 from experiments.start_demo_job import LOCAL_CLIENT_KEY, local_signed_body
-from gpuchain_core.payout_terms import validate_terms
+from ekido_core.payout_terms import validate_terms
 
 
 class LocalDemoSignedJob(unittest.TestCase):

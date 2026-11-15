@@ -16,8 +16,8 @@ from pathlib import Path
 from eth_account import Account
 from web3 import Web3
 
-from gpuchain_core.payout_terms import job_binding, new_job_ids, provider_quote, workload_hash
-from gpuchain_verifier.evaluate import load_eval_set
+from ekido_core.payout_terms import job_binding, new_job_ids, provider_quote, workload_hash
+from ekido_verifier.evaluate import load_eval_set
 from tests.test_e2e_recovery import PYTHONPATH, ROOT, WALLETS, Cluster, job_spec
 
 RPC = os.environ.get("ANVIL_RPC", "http://host.docker.internal:18545")
@@ -78,7 +78,7 @@ class Settlement(Cluster):
         for index, key in enumerate(VERIFIERS[:2]):
             log = open(self.root / f"verifier_{index}.log", "wb")
             self.addCleanup(log.close)
-            command = [sys.executable, "-m", "gpuchain_verifier.worker", "--coordinator", self.base, "--key", key, "--device", "cpu", "--eval-examples", "512"]
+            command = [sys.executable, "-m", "ekido_verifier.worker", "--coordinator", self.base, "--key", key, "--device", "cpu", "--eval-examples", "512"]
             if self._testMethodName.startswith("test_secure_"):
                 command += ["--rpc-url", RPC, "--chain-id", str(self.w3.eth.chain_id), "--escrow-address", self.escrow.address, "--state-dir", str(self.root / f"verifier_state_{index}")]
             else:
@@ -204,7 +204,7 @@ class Settlement(Cluster):
         log = open(self.root / "agent_a_restarted.log", "wb")
         self.addCleanup(log.close)
         self.processes["a"] = subprocess.Popen(
-            [sys.executable, "-m", "gpuchain_agent.agent", "--coordinator", f"ws://127.0.0.1:{self.port}", "--provider-id", provider_a, "--wallet-key", WALLETS["a"], "--workdir", str(self.root / "agent_a2"), "--mode", "process", "--device", "cpu"],
+            [sys.executable, "-m", "ekido_agent.agent", "--coordinator", f"ws://127.0.0.1:{self.port}", "--provider-id", provider_a, "--wallet-key", WALLETS["a"], "--workdir", str(self.root / "agent_a2"), "--mode", "process", "--device", "cpu"],
             env={**os.environ, "PYTHONPATH": PYTHONPATH, "PYTHONDONTWRITEBYTECODE": "1"}, stdout=log, stderr=subprocess.STDOUT,
         )
         self.wait_for(lambda: self.provider(provider_a)["enrolled_key"] != old_key, "A's agent to come back with a new key", 60)

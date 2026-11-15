@@ -73,11 +73,11 @@ try {
     Write-Host "CPU-only tests. Logs: $logDir"
     $watchdogPath = Join-Path $PSScriptRoot 'memory-watchdog.ps1'
     $watchdogProcess = Start-Process powershell.exe -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File', ('"' + $watchdogPath + '"')) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logDir 'watchdog.stdout.log') -RedirectStandardError (Join-Path $logDir 'watchdog.stderr.log')
-    $env:PYTHONPATH = @($repoRoot, "$repoRoot\apps\coordinator", "$repoRoot\packages\gpuchain_core", "$repoRoot\workers\agent", "$repoRoot\workers\runtime", "$repoRoot\workers\verifier") -join ';'
+    $env:PYTHONPATH = @($repoRoot, "$repoRoot\apps\coordinator", "$repoRoot\packages\ekido_core", "$repoRoot\workers\agent", "$repoRoot\workers\runtime", "$repoRoot\workers\verifier") -join ';'
     $env:PYTHONDONTWRITEBYTECODE = '1'
     $env:PYTHONUTF8 = '1'
     if ($Suite -notin @('settlement', 'secure-settlement', 'chain', 'quality-smoke')) {
-        foreach ($area in @(@('core','packages\gpuchain_core'), @('runtime','workers\runtime'), @('agent','workers\agent'), @('coordinator','apps\coordinator'), @('verifier','workers\verifier'))) {
+        foreach ($area in @(@('core','packages\ekido_core'), @('runtime','workers\runtime'), @('agent','workers\agent'), @('coordinator','apps\coordinator'), @('verifier','workers\verifier'))) {
             Invoke-Suite $area[0] (Join-Path $repoRoot $area[1]) $python @('-m','unittest','discover','-s','tests','-v')
         }
     }

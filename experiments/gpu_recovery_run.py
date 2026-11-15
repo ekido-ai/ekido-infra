@@ -26,10 +26,10 @@ from pathlib import Path
 from eth_account import Account
 
 ROOT = Path(__file__).resolve().parents[1]
-HOST_PATH = os.pathsep.join(str(ROOT / p) for p in ("apps/coordinator", "packages/gpuchain_core", "workers/agent", "workers/runtime"))
+HOST_PATH = os.pathsep.join(str(ROOT / p) for p in ("apps/coordinator", "packages/ekido_core", "workers/agent", "workers/runtime"))
 WALLETS = {name: "0x" + c * 64 for name, c in (("a", "1"), ("b", "2"), ("c", "3"), ("p", "4"))}
 VERIFIER_KEYS = ["0x" + c * 64 for c in ("a", "b")]
-CONTAINER_PATH = "/app/packages/gpuchain_core:/app/workers/runtime:/app/workers/verifier"
+CONTAINER_PATH = "/app/packages/ekido_core:/app/workers/runtime:/app/workers/verifier"
 
 
 class Client:
@@ -80,10 +80,10 @@ def docker_base(args, name: str) -> list[str]:
 def eval_set_hash(args, spec: dict) -> str:
     code = (
         "import json,sys\n"
-        "from gpuchain_verifier.evaluate import load_eval_set\n"
+        "from ekido_verifier.evaluate import load_eval_set\n"
         f"print('HASH', load_eval_set(json.loads(sys.argv[1]), {args.eval_examples}).hash)\n"
     )
-    result = subprocess.run([*docker_base(args, f"gpuchain-evalhash-{args.run_id}"), "python", "-c", code, json.dumps(spec)], capture_output=True, text=True, timeout=300, check=False)
+    result = subprocess.run([*docker_base(args, f"ekido-evalhash-{args.run_id}"), "python", "-c", code, json.dumps(spec)], capture_output=True, text=True, timeout=300, check=False)
     for line in result.stdout.splitlines():
         if line.startswith("HASH "):
             return line.split()[1]
@@ -115,7 +115,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=1337)
     parser.add_argument("--revision", default="main")
     parser.add_argument("--port", type=int, default=8123)
-    parser.add_argument("--image", default="gpuchain-runtime:spike")
+    parser.add_argument("--image", default="ekido-runtime:spike")
     parser.add_argument("--cap-b", type=int, default=768)
     parser.add_argument("--cap-c", type=int, default=300)
     parser.add_argument("--cap-p", type=int, default=1200)
@@ -123,7 +123,7 @@ def main() -> None:
     args = parser.parse_args()
     args.run_id = secrets.token_hex(8)
 
-    work = Path(tempfile.mkdtemp(prefix="gpuchain_run_", dir=os.environ.get("GPUCHAIN_RUN_DIR")))
+    work = Path(tempfile.mkdtemp(prefix="gpuchain_run_", dir=os.environ.get("EKIDO_RUN_DIR")))
     client = Client(f"http://127.0.0.1:{args.port}")
     processes: dict[str, subprocess.Popen] = {}
     logs = []
@@ -148,13 +148,13 @@ def main() -> None:
             "confidence": 0.95,
             "bootstrap_resamples": 2000,
             "eval_set_hash": eval_set_hash(args, spec),
-            "eval_version_hash": hashlib.sha256((ROOT / "workers/verifier/gpuchain_verifier/evaluate.py").read_bytes()).hexdigest(),
+            "eval_version_hash": hashlib.sha256((ROOT / "workers/verifier/ekido_verifier/evaluate.py").read_bytes()).hexdigest(),
             "probation_steps": 50,
         }
         verifiers = ",".join(Account.from_key(k).address for k in VERIFIER_KEYS)
         spawn(
             "coordinator",
-            [sys.executable, "-m", "uvicorn", "--factory", "gpuchain_coordinator.main:create_app", "--port", str(args.port), "--log-level", "warning"],
+            [sys.executable, "-m", "uvicorn", "--factory", "ekido_coordinator.main:create_app", "--port", str(args.port), "--log-level", "warning"],
             {**base_env, "DATABASE_URL": f"sqlite:///{(work / 'run.db').as_posix()}", "DEMO_MODE": "1", "ARTIFACT_DIR": str(work / "artifacts"), "VERIFIER_ADDRESSES": verifiers, "VERIFIER_QUORUM": "2"},
         )
         wait_for(lambda: client.get("/healthz")["status"] == "ok", "the coordinator", 60, processes)
@@ -162,7 +162,7 @@ def main() -> None:
         for index, key in enumerate(VERIFIER_KEYS):
             spawn(
                 f"verifier_{index + 1}",
-                [*docker_base(args, f"gpuchain-verifier-{args.run_id}-{index + 1}"), "python", "-m", "gpuchain_verifier.worker", "--coordinator", f"http://host.docker.internal:{args.port}", "--key", key, "--device", "cuda", "--eval-examples", str(args.eval_examples)],
+                [*docker_base(args, f"ekido-verifier-{args.run_id}-{index + 1}"), "python", "-m", "ekido_verifier.worker", "--coordinator", f"http://host.docker.internal:{args.port}", "--key", key, "--device", "cuda", "--eval-examples", str(args.eval_examples)],
                 base_env,
             )
 
@@ -176,7 +176,7 @@ def main() -> None:
         for name, label, kind, cap, price, fault in definitions:
             created = client.post("/providers", {"name": label, "wallet_address": Account.from_key(WALLETS[name]).address, "kind": kind, "capacity_mib": cap, "price_per_step": price})
             providers[name] = created["provider_id"]
-            command = [sys.executable, "-m", "gpuchain_agent.agent", "--coordinator", f"ws://127.0.0.1:{args.port}", "--provider-id", created["provider_id"], "--wallet-key", WALLETS[name],
+            command = [sys.executable, "-m", "ekido_agent.agent", "--coordinator", f"ws://127.0.0.1:{args.port}", "--provider-id", created["provider_id"], "--wallet-key", WALLETS[name],
                        "--workdir", str(work / f"agent_{name}"), "--mode", "docker", "--image", args.image, "--repo-root", str(ROOT), "--device", "cuda"]
             if fault:
                 command += ["--fault", fault, "--fault-at-step", "0"]
@@ -254,7 +254,7 @@ def main() -> None:
             log.close()
         # Never kill other agents' containers. Inspect the owner label before stopping
         # the uniquely named helper containers started by this experiment.
-        for name in [f"gpuchain-evalhash-{args.run_id}", *(f"gpuchain-verifier-{args.run_id}-{i}" for i in (1, 2))]:
+        for name in [f"ekido-evalhash-{args.run_id}", *(f"ekido-verifier-{args.run_id}-{i}" for i in (1, 2))]:
             owner = subprocess.run(["docker", "inspect", "--format", '{{index .Config.Labels "gpuchain.story_owner"}}', name], capture_output=True, text=True, check=False)
             if owner.returncode == 0 and owner.stdout.strip() == args.run_id:
                 subprocess.run(["docker", "kill", name], capture_output=True, check=False)

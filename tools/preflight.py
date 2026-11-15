@@ -19,7 +19,7 @@ MIN_FREE_DISK_GB = 15
 WARN_FREE_RAM_GB = 6
 FAIL_FREE_RAM_GB = 4
 WARN_TEMP_C = 70
-IMAGE = "gpuchain-runtime:spike"
+IMAGE = "ekido-runtime:spike"
 results: list[tuple[str, str, str]] = []
 
 

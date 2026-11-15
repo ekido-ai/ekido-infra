@@ -15,8 +15,8 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from eth_account import Account
-from gpuchain_core.payout_terms import job_binding, new_job_ids, provider_quote, validate_terms, workload_hash
-from gpuchain_core.protocol_fee import FEE_KEY, fee_problems
+from ekido_core.payout_terms import job_binding, new_job_ids, provider_quote, validate_terms, workload_hash
+from ekido_core.protocol_fee import FEE_KEY, fee_problems
 
 
 def main():

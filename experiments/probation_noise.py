@@ -20,14 +20,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-for part in ("packages/gpuchain_core", "workers/runtime", "workers/verifier", "experiments"):
+for part in ("packages/ekido_core", "workers/runtime", "workers/verifier", "experiments"):
     sys.path.insert(0, str(ROOT / part))
 
 import torch  # noqa: E402
-from gpuchain_runtime.run import run  # noqa: E402
-from gpuchain_core.data_identity import apply_identity  # noqa: E402
-from gpuchain_runtime.synthetic import exec_config, synthetic_spec  # noqa: E402
-from gpuchain_verifier.evaluate import evaluate_checkpoint, load_eval_set  # noqa: E402
+from ekido_runtime.run import run  # noqa: E402
+from ekido_core.data_identity import apply_identity  # noqa: E402
+from ekido_runtime.synthetic import exec_config, synthetic_spec  # noqa: E402
+from ekido_verifier.evaluate import evaluate_checkpoint, load_eval_set  # noqa: E402
 
 JOB = "00000000-0000-0000-0000-00000000f002"
 MARGINS = (0.02, 0.03, 0.05, 0.08, 0.10, 0.15)

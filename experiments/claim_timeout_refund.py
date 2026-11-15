@@ -12,9 +12,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path[:0] = [str(ROOT / "apps/coordinator"), str(ROOT / "packages/gpuchain_core")]
+sys.path[:0] = [str(ROOT / "apps/coordinator"), str(ROOT / "packages/ekido_core")]
 
-from gpuchain_coordinator.chain import ChainError, EscrowClient  # noqa: E402
+from ekido_coordinator.chain import ChainError, EscrowClient  # noqa: E402
 
 READ_ONLY_KEY = "0x" + "01" * 32  # Public dummy; used only to instantiate a read-only client.
 

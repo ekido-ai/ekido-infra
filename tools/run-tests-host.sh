@@ -26,13 +26,13 @@ suite() {
 e2e() {
   local name="$1" file="$2"
   echo "=== $name"
-  PYTHONPATH="$ROOT${SEP}$ROOT/apps/coordinator${SEP}$ROOT/packages/gpuchain_core${SEP}$ROOT/workers/agent${SEP}$ROOT/workers/runtime${SEP}$ROOT/workers/verifier" \
+  PYTHONPATH="$ROOT${SEP}$ROOT/apps/coordinator${SEP}$ROOT/packages/ekido_core${SEP}$ROOT/workers/agent${SEP}$ROOT/workers/runtime${SEP}$ROOT/workers/verifier" \
     "$PY" -m unittest "$file" 2>&1 | tail -n "${TAIL:-25}" | grep -vE "$FILTER"
   [ "${PIPESTATUS[0]}" -eq 0 ] || FAILED=1
 }
 
-CORE="$ROOT/packages/gpuchain_core"
-suite "core" packages/gpuchain_core ".${SEP}tests"
+CORE="$ROOT/packages/ekido_core"
+suite "core" packages/ekido_core ".${SEP}tests"
 suite "runtime" workers/runtime ".${SEP}$CORE"
 suite "agent" workers/agent ".${SEP}$CORE"
 suite "coordinator" apps/coordinator ".${SEP}$CORE"

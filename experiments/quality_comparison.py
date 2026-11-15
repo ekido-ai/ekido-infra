@@ -27,14 +27,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PATHS = [str(ROOT / p) for p in ("packages/gpuchain_core", "workers/runtime", "workers/verifier")]
+PATHS = [str(ROOT / p) for p in ("packages/ekido_core", "workers/runtime", "workers/verifier")]
 sys.path[:0] = PATHS
 
 import torch  # noqa: E402
-from gpuchain_core.compiler import choose_amp  # noqa: E402
-from gpuchain_core.data_identity import apply_identity  # noqa: E402
-from gpuchain_runtime.synthetic import synthetic_spec  # noqa: E402
-from gpuchain_verifier.evaluate import evaluate_checkpoint, load_eval_set  # noqa: E402
+from ekido_core.compiler import choose_amp  # noqa: E402
+from ekido_core.data_identity import apply_identity  # noqa: E402
+from ekido_runtime.synthetic import synthetic_spec  # noqa: E402
+from ekido_verifier.evaluate import evaluate_checkpoint, load_eval_set  # noqa: E402
 
 MARGIN = 0.02
 JOB = "00000000-0000-0000-0000-00000000c001"
@@ -94,7 +94,7 @@ def run_attempt(workdir: Path, spec: dict, exec_config: dict, device: str, *, at
     started = time.monotonic()
     env = {**os.environ, "PYTHONPATH": os.pathsep.join(PATHS)}
     with open(workdir / "runtime.log", "ab") as log:
-        code = subprocess.run([sys.executable, "-m", "gpuchain_runtime.run", str(path)], env=env, stdout=log, stderr=subprocess.STDOUT, check=False).returncode
+        code = subprocess.run([sys.executable, "-m", "ekido_runtime.run", str(path)], env=env, stdout=log, stderr=subprocess.STDOUT, check=False).returncode
     events = [json.loads(line) for line in (workdir / "events.jsonl").read_text(encoding="utf-8").splitlines()]
     if code != 0:
         raise SystemExit(f"attempt {attempt} exited with {code}: {events[-1]}. See {workdir / 'runtime.log'}")

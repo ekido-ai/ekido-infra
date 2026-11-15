@@ -5,8 +5,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "packages/gpuchain_core"))
-from gpuchain_core.data_identity import hash_text_labels, require_commit  # noqa: E402
+sys.path.insert(0, str(ROOT / "packages/ekido_core"))
+from ekido_core.data_identity import hash_text_labels, require_commit  # noqa: E402
 
 
 def main():

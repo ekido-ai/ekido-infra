@@ -29,15 +29,15 @@ from eth_account import Account
 from web3 import Web3
 
 ROOT = Path(__file__).resolve().parents[1]
-HOST_PATH = os.pathsep.join(str(ROOT / p) for p in ("apps/coordinator", "packages/gpuchain_core", "workers/agent", "workers/runtime", "workers/verifier"))
-CONTAINER_PATH = "/app/packages/gpuchain_core:/app/workers/runtime:/app/workers/verifier"
+HOST_PATH = os.pathsep.join(str(ROOT / p) for p in ("apps/coordinator", "packages/ekido_core", "workers/agent", "workers/runtime", "workers/verifier"))
+CONTAINER_PATH = "/app/packages/ekido_core:/app/workers/runtime:/app/workers/verifier"
 FOUNDRY = "ghcr.io/foundry-rs/foundry:latest"
 FOUNDRY_BIN = ROOT / ".cache" / "foundry"  # anvil and forge, for --no-docker. See docs/demo-runbook.md.
 NO_DOCKER = False  # Set from the command line.
 CPU_DECLARED_MIB = 4096  # The compiler's margin check needs a number. Nothing on a CPU enforces it.
-CPU_CONTAINER = "gpuchain-cpu-stack"
-CPU_IMAGE = "gpuchain-test:cpu"
-CPU_PATH = ":".join(f"/repo/{p}" for p in ("apps/coordinator", "packages/gpuchain_core", "workers/agent", "workers/runtime", "workers/verifier"))
+CPU_CONTAINER = "ekido-cpu-stack"
+CPU_IMAGE = "ekido-test:cpu"
+CPU_PATH = ":".join(f"/repo/{p}" for p in ("apps/coordinator", "packages/ekido_core", "workers/agent", "workers/runtime", "workers/verifier"))
 # Anvil's first default account. A public test key with no value anywhere.
 ANVIL_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 # Fixed, public demo-only keys for the local chain. Base Sepolia uses the wallets in .env instead.
@@ -80,7 +80,7 @@ def cpu_exec(*arguments: str, env: dict | None = None) -> list[str]:
 
 
 def cpu_spec(total_steps: int) -> dict:
-    code = f"import json\nfrom gpuchain_runtime.synthetic import synthetic_spec\nprint(json.dumps(synthetic_spec(total_steps={total_steps})))"
+    code = f"import json\nfrom ekido_runtime.synthetic import synthetic_spec\nprint(json.dumps(synthetic_spec(total_steps={total_steps})))"
     spec = json.loads(subprocess.run(cpu_exec("-c", code), capture_output=True, text=True, check=True, env={**os.environ, "PYTHONPATH": HOST_PATH}).stdout)
     spec.update(template="synthetic-linear/v1", checkpoint_every_steps=max(25, total_steps // 30))
     return spec
@@ -128,7 +128,7 @@ def read_env() -> dict:
 class Stack:
     def __init__(self, args):
         self.args = args
-        self.work = Path(tempfile.mkdtemp(prefix="gpuchain_demo_", dir=os.environ.get("GPUCHAIN_RUN_DIR")))
+        self.work = Path(tempfile.mkdtemp(prefix="gpuchain_demo_", dir=os.environ.get("EKIDO_RUN_DIR")))
         self.processes: dict[str, subprocess.Popen] = {}
         self.logs = []
         self.base = f"http://127.0.0.1:{args.port}"
@@ -183,8 +183,8 @@ class Stack:
             self.spawn("anvil", [str(FOUNDRY_BIN / "anvil"), "--port", str(self.args.chain_port), "--silent"])
             subprocess.run([str(FOUNDRY_BIN / "forge"), "build"], cwd=ROOT / "contracts", check=True, capture_output=True)
         else:
-            subprocess.run(["docker", "rm", "-f", "gpuchain-anvil"], capture_output=True, check=False)
-            subprocess.run(["docker", "run", "-d", "--rm", "--name", "gpuchain-anvil", "-p", f"127.0.0.1:{self.args.chain_port}:8545", "--memory", "256m", "--entrypoint", "anvil", FOUNDRY, "--host", "0.0.0.0", "--silent"], check=True, capture_output=True)
+            subprocess.run(["docker", "rm", "-f", "ekido-anvil"], capture_output=True, check=False)
+            subprocess.run(["docker", "run", "-d", "--rm", "--name", "ekido-anvil", "-p", f"127.0.0.1:{self.args.chain_port}:8545", "--memory", "256m", "--entrypoint", "anvil", FOUNDRY, "--host", "0.0.0.0", "--silent"], check=True, capture_output=True)
             subprocess.run(["docker", "run", "--rm", "-v", f"{ROOT}:/repo", "-w", "/repo/contracts", "--entrypoint", "forge", FOUNDRY, "build"], check=True, capture_output=True)
         rpc = f"http://127.0.0.1:{self.args.chain_port}"
         w3 = Web3(Web3.HTTPProvider(rpc))
@@ -226,7 +226,7 @@ class Stack:
         ]
 
     def eval_hash(self, spec: dict) -> str:
-        code = f"import json,sys\nfrom gpuchain_verifier.evaluate import load_eval_set\nprint('HASH', load_eval_set(json.loads(sys.argv[1]), {self.args.eval_examples}).hash)\n"
+        code = f"import json,sys\nfrom ekido_verifier.evaluate import load_eval_set\nprint('HASH', load_eval_set(json.loads(sys.argv[1]), {self.args.eval_examples}).hash)\n"
         if self.args.cpu or NO_DOCKER:
             command, env = cpu_exec("-c", code, json.dumps(spec)), self.env if NO_DOCKER else None
         else:
@@ -260,12 +260,12 @@ class Stack:
             # Inside the container, the chain is on the host. Clients come through Docker's gateway, so
             # none look local to the API guard. The port is published on 127.0.0.1 only.
             settings.update(OPEN_API="1", DATABASE_URL="sqlite:////tmp/demo.db", ARTIFACT_DIR="/tmp/artifacts", RPC_URL=chain["rpc"].replace("127.0.0.1", "host.docker.internal"))
-            self.spawn("coordinator", cpu_exec("-m", "uvicorn", "--factory", "gpuchain_coordinator.main:create_app", "--host", "0.0.0.0", "--port", str(args.port), "--log-level", "warning", env=settings), {**self.env, **settings})
+            self.spawn("coordinator", cpu_exec("-m", "uvicorn", "--factory", "ekido_coordinator.main:create_app", "--host", "0.0.0.0", "--port", str(args.port), "--log-level", "warning", env=settings), {**self.env, **settings})
         else:
             settings.update(DATABASE_URL=f"sqlite:///{(self.work / 'demo.db').as_posix()}", ARTIFACT_DIR=str(self.work / "artifacts"))
             # --lan lets agents on other machines connect. The API guard still keeps the operator API to this laptop.
             bind = ["--host", "0.0.0.0"] if args.lan else []
-            self.spawn("coordinator", [sys.executable, "-m", "uvicorn", "--factory", "gpuchain_coordinator.main:create_app", *bind, "--port", str(args.port), "--log-level", "warning"], {**self.env, **settings})
+            self.spawn("coordinator", [sys.executable, "-m", "uvicorn", "--factory", "ekido_coordinator.main:create_app", *bind, "--port", str(args.port), "--log-level", "warning"], {**self.env, **settings})
         self.wait(lambda: self.call("GET", "/healthz")["status"] == "ok", "the coordinator")
 
         host = f"http://127.0.0.1:{args.port}" if args.cpu or NO_DOCKER else f"http://host.docker.internal:{args.port}"
@@ -277,11 +277,11 @@ class Stack:
             elif args.cpu:
                 key_env["VERIFIER_RPC_URL"] = chain["rpc"].replace("127.0.0.1", "host.docker.internal")
             if args.cpu or NO_DOCKER:
-                self.spawn(f"verifier_{index}", cpu_exec("-m", "gpuchain_verifier.worker", "--coordinator", host, "--device", "cpu" if args.cpu else "cuda", "--eval-examples", str(args.eval_examples), env=key_env), {**self.env, **key_env})
+                self.spawn(f"verifier_{index}", cpu_exec("-m", "ekido_verifier.worker", "--coordinator", host, "--device", "cpu" if args.cpu else "cuda", "--eval-examples", str(args.eval_examples), env=key_env), {**self.env, **key_env})
             else:
-                base = self.docker_base(f"gpuchain-verifier-{index}")
+                base = self.docker_base(f"ekido-verifier-{index}")
                 key_env["VERIFIER_RPC_URL"] = chain["rpc"].replace("127.0.0.1", "host.docker.internal")
-                self.spawn(f"verifier_{index}", [*base[:3], *[item for name in key_env for item in ("-e", name)], *base[3:], "python", "-m", "gpuchain_verifier.worker", "--coordinator", host, "--device", "cuda", "--eval-examples", str(args.eval_examples)], {**self.env, **key_env})
+                self.spawn(f"verifier_{index}", [*base[:3], *[item for name in key_env for item in ("-e", name)], *base[3:], "python", "-m", "ekido_verifier.worker", "--coordinator", host, "--device", "cuda", "--eval-examples", str(args.eval_examples)], {**self.env, **key_env})
 
         definitions = [
             ("a", "Provider A", "REAL", None, "0.001", None),
@@ -302,7 +302,7 @@ class Stack:
             key = self.keys[f"provider_{name}"]
             created = self.call("POST", "/providers", {"name": label, "wallet_address": Account.from_key(key).address, "kind": kind, "capacity_mib": cap, "price_per_step": price})
             providers[name] = created["provider_id"]
-            agent = ["-m", "gpuchain_agent.agent", "--coordinator", f"ws://127.0.0.1:{args.port}", "--provider-id", created["provider_id"]]
+            agent = ["-m", "ekido_agent.agent", "--coordinator", f"ws://127.0.0.1:{args.port}", "--provider-id", created["provider_id"]]
             faults = ["--fault", fault, "--fault-at-step", "0"] if fault else []
             key_env = {"PROVIDER_WALLET_KEY": key}
             if args.cpu:
@@ -324,7 +324,7 @@ class Stack:
 
         policy = {
             "schema_version": 1, "metric": "accuracy", "min_absolute": 0.88 if not args.cpu else 0.5, "non_inferiority_margin": 0.02, "probation_margin": PROBATION_MARGIN, "confidence": 0.95, "bootstrap_resamples": 2000,
-            "eval_set_hash": self.eval_hash(spec), "eval_version_hash": hashlib.sha256((ROOT / "workers/verifier/gpuchain_verifier/evaluate.py").read_bytes()).hexdigest(), "probation_steps": 50,
+            "eval_set_hash": self.eval_hash(spec), "eval_version_hash": hashlib.sha256((ROOT / "workers/verifier/ekido_verifier/evaluate.py").read_bytes()).hexdigest(), "probation_steps": 50,
         }
         # Holds no keys on purpose. start_demo_job.py finds the client's key by itself.
         info = {"testnet": args.testnet, "api": self.base, "ws_job": f"ws://127.0.0.1:{args.port}/ws/jobs/<job_id>", "chain": chain, "providers": providers, "dispute_window": DISPUTE_WINDOW,
@@ -363,7 +363,7 @@ def main() -> None:
     parser.add_argument("--lan", action="store_true", help="Let agents on other machines connect. See docs/second-gpu-provider.md.")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--chain-port", type=int, default=8545)
-    parser.add_argument("--image", default="gpuchain-runtime:spike")
+    parser.add_argument("--image", default="ekido-runtime:spike")
     parser.add_argument("--total-steps", type=int, default=400)
     parser.add_argument("--cap-b", type=int, default=768)
     parser.add_argument("--cap-c", type=int, default=300)

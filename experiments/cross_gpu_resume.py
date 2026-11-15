@@ -28,9 +28,9 @@ sys.path.insert(0, str(ROOT / "experiments"))
 
 from quality_comparison import MARGIN, amp_for, exec_for, real_spec, run_attempt, test_spec  # noqa: E402
 import torch  # noqa: E402
-from gpuchain_core.gpck import MANIFEST_FILE  # noqa: E402
-from gpuchain_core.data_identity import apply_identity  # noqa: E402
-from gpuchain_verifier.evaluate import evaluate_checkpoint, load_eval_set  # noqa: E402
+from ekido_core.gpck import MANIFEST_FILE  # noqa: E402
+from ekido_core.data_identity import apply_identity  # noqa: E402
+from ekido_verifier.evaluate import evaluate_checkpoint, load_eval_set  # noqa: E402
 
 JOB = "00000000-0000-0000-0000-00000000c001"
 SPEC_FILE = "spec.json"
