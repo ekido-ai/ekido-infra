@@ -378,7 +378,7 @@ def main() -> None:
     try:
         stack.run()
     except KeyboardInterrupt:
-        pass
+        pass  # Ctrl+C is how the demo is stopped; the stack shuts down in the finally block.
     finally:
         stack.stop()
 

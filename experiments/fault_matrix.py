@@ -50,7 +50,7 @@ def wait(check, timeout: float, every: float = 1.0):
             if value:
                 return value
         except (urllib.error.URLError, OSError, ValueError):
-            pass
+            pass  # Not ready yet: try again until the deadline.
         time.sleep(every)
     return None
 
