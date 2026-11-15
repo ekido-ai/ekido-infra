@@ -4,7 +4,7 @@ How the hosted Base Sepolia network is run, checked, backed up and restored. Eve
 
 ## What runs where
 
-One Google Cloud VM (`gpuchain-vm`, zone `asia-south1-a`, reserved static IP) runs these systemd units, all enabled at boot:
+One AWS EC2 instance (`ekido-server`, `m7i-flex.large`, Mumbai `ap-south-1`, Elastic IP `13.203.167.11`) runs these systemd units, all enabled at boot. Both `ekido.duckdns.org` (the site) and `gpuchain.duckdns.org` (the API and provider endpoint) point at it. It moved here from Google Cloud on 15 Nov 2026; `infra/aws/bootstrap.sh` and `infra/aws/restore.sh` rebuild it from scratch.
 
 | Unit | What it is |
 |---|---|
@@ -16,7 +16,9 @@ One Google Cloud VM (`gpuchain-vm`, zone `asia-south1-a`, reserved static IP) ru
 | `gpuchain-monitor.timer` | Health check every 5 minutes |
 | `gpuchain-backup.timer` | Backup every day at 03:00 UTC |
 
-Keys and settings live in root-only files under `/etc/gpuchain/`. They are never printed, logged or committed.
+Keys and settings live in root-only files under `/etc/gpuchain/`, and their source of truth is AWS SSM Parameter Store (`/ekido/server/*`, SecureString). They are never printed, logged or committed.
+
+There is no SSH: the security group opens only ports 80 and 443. Run commands through SSM, for example `aws ssm send-command --instance-ids <id> --document-name AWS-RunShellScript --parameters 'commands=["systemctl is-active gpuchain-sepolia"]'`, or open a shell with `aws ssm start-session --target <id>`.
 
 ## Is it healthy?
 
@@ -27,7 +29,7 @@ curl -s https://gpuchain.duckdns.org/sepolia/providers   # the smoke provider sh
 
 `/readyz` checks the database, artifact storage and free space, the chain RPC's latest block age, the coordinator's gas balance and the settlement backlog. It returns 503 when any check fails.
 
-On the VM:
+On the server:
 
 ```bash
 systemctl is-active caddy gpuchain-sepolia gpuchain-sepolia-verifier@1 gpuchain-sepolia-verifier@2 gpuchain-sepolia-web gpuchain-sepolia-smoke-provider
@@ -36,7 +38,7 @@ journalctl -t gpuchain-monitor -p err --since today       # problems the monitor
 
 ## Alerts
 
-Cloud Monitoring runs two uptime checks every 5 minutes from several regions: `/sepolia/readyz` (must contain `"status":"ready"`) and the website. If a check fails from more than one region for 5 minutes, an email goes to the maintainer. Each alert's text says what to look at first.
+The **Uptime** workflow in GitHub Actions (`.github/workflows/uptime.yml`) checks `/sepolia/readyz` (must say `"status": "ready"`) and the site's pages every 15 minutes. When it fails, GitHub emails the repository's admins. On the server, the monitor timer logs problems to the journal every 5 minutes.
 
 ## Backups
 
@@ -44,9 +46,9 @@ Every day at 03:00 UTC, `/opt/gpuchain-ops/gpuchain-backup.sh` (source: `infra/g
 
 1. Takes a consistent SQLite snapshot with the online backup API, runs `PRAGMA integrity_check`, and gzips it under `/var/backups/gpuchain/db/`.
 2. Copies any new checkpoint artifacts to `/var/backups/gpuchain/artifacts/` (they are content-addressed and never change).
-3. If `/etc/gpuchain/backup.env` sets `BACKUP_BUCKET`, copies the snapshot and new artifacts to that private Cloud Storage bucket.
+3. If `/etc/gpuchain/backup.env` sets `BACKUP_S3_BUCKET`, copies the snapshot and new artifacts to that private S3 bucket (`ekido-backups-…`, encrypted, all public access blocked).
 
-The VM's account can add and read objects in the bucket but cannot delete them. The bucket deletes database snapshots after 90 days; artifacts are kept.
+The server's IAM role can add and read objects in the bucket but cannot delete them. The bucket deletes database snapshots after 90 days and artifact copies after 180 days.
 
 Run a backup now:
 
@@ -59,9 +61,9 @@ journalctl -u gpuchain-backup.service -n 10 --no-pager
 
 1. Stop the coordinator: `sudo systemctl stop gpuchain-sepolia`.
 2. Move the current database aside (don't delete it).
-3. Fetch a snapshot: `gcloud storage cp gs://<bucket>/db/jobs-<stamp>.db.gz .` and `gunzip` it.
+3. Fetch a snapshot: `aws s3 cp s3://<bucket>/db/jobs-<stamp>.db.gz - | cat > jobs-<stamp>.db.gz` and `gunzip` it. (The snap-packaged AWS CLI writes nothing when its stdout is redirected straight to a file; pipe it.)
 4. Check it: `python3 -c "import sqlite3; print(sqlite3.connect('jobs-<stamp>.db').execute('PRAGMA integrity_check').fetchone())"`.
-5. Put it at `/var/lib/gpuchain-sepolia/jobs.db` with the service's ownership, and sync artifacts back with `gcloud storage rsync`.
+5. Put it at `/var/lib/gpuchain-sepolia/jobs.db` and give it the folder's owner (`chown --reference=/var/lib/private/gpuchain-sepolia ...`), then copy artifacts back with `aws s3 sync s3://<bucket>/artifacts <state>/artifacts`. To rebuild a whole server instead, run `infra/aws/bootstrap.sh` then `infra/aws/restore.sh`.
 6. Start the coordinator and check `/readyz`.
 
 Money is never in the database: balances live in the escrow contract, so a restore can't lose or create funds.
@@ -88,9 +90,9 @@ sudo rm /var/lib/gpuchain-autodeploy/failed                    # retry a refused
 
 Installed once with `sudo bash infra/gcp/ops/install-autodeploy.sh <sha already running>`.
 
-## Restarting the VM
+## Restarting the server
 
-A full restart takes about 2 minutes; every service above starts on its own. Changing the VM's access scopes needs a stop and start. The external IP is reserved, so DNS keeps working.
+A full restart takes about 2 minutes; every service above starts on its own. The Elastic IP stays attached, so DNS keeps working.
 
 ## Topping up gas
 
@@ -98,6 +100,6 @@ When `/readyz` reports low coordinator gas, send a little Base Sepolia test ETH 
 
 ## What is still missing
 
-- A rehearsed restore from the bucket onto a fresh VM.
-- Postgres with point-in-time recovery, job leases and a second coordinator, so one VM is no longer a single point of failure.
+- A rehearsed restore of a backup snapshot onto a fresh instance. (The 15 Nov move used the same scripts with a live copy.)
+- Postgres with point-in-time recovery, job leases and a second coordinator, so one server is no longer a single point of failure.
 - Automatic gas top-up.
