@@ -56,6 +56,9 @@ install -m 0644 "$SRC/infra/server/sepolia_coordinator.py" "$APP/infra/server/se
 [ -f "$APP/contracts/out/GPUChainEscrow.sol/GPUChainEscrow.json" ] || echo "NOTE: escrow ABI missing at $APP/contracts/out; copy it before starting the coordinator"
 
 echo "== dashboard"
+SITE_HOST=ekido.duckdns.org
+API_HOST=gpuchain.duckdns.org
+[ -f /etc/ekido/site.env ] && . /etc/ekido/site.env   # A staging server sets its own names here.
 mkdir -p "$WEB"
 rsync -a --delete --exclude node_modules --exclude .next "$SRC/apps/web-combined/" "$WEB/"
 chown -R ekido:ekido "$WEB"
@@ -63,8 +66,8 @@ chown -R ekido:ekido "$WEB"
 # (fs.protected_regular), which stopped a bootstrap once.
 sudo -u ekido bash -c "cd '$WEB' && npm ci --no-audit --no-fund" >/var/log/ekido-npm-ci.log 2>&1 || { tail -30 /var/log/ekido-npm-ci.log; exit 1; }
 sudo -u ekido env -C "$WEB" \
-  NEXT_PUBLIC_COORDINATOR_URL=https://gpuchain.duckdns.org/sepolia \
-  "NEXT_PUBLIC_COORDINATOR_WS=wss://gpuchain.duckdns.org/sepolia/ws/jobs/{job}" \
+  NEXT_PUBLIC_COORDINATOR_URL="https://$API_HOST/sepolia" \
+  "NEXT_PUBLIC_COORDINATOR_WS=wss://$API_HOST/sepolia/ws/jobs/{job}" \
   NEXT_PUBLIC_EVENT_SOURCE=live NEXT_PUBLIC_CHAIN_ID=84532 NEXT_PUBLIC_SIGNED_JOBS=1 \
   NEXT_PUBLIC_ESCROW_ADDRESS=0x1BF65f755457a92850009c88AFb337Ec57745a22 \
   npx next build >/var/log/ekido-next-build.log 2>&1 || { tail -30 /var/log/ekido-next-build.log; exit 1; }
@@ -86,6 +89,10 @@ chmod 644 /var/lib/ekido-autodeploy/public/version.json
 
 echo "== caddy"
 install -m 0644 "$SRC/infra/server/Caddyfile" /etc/caddy/Caddyfile
+# Caddy reads SITE_HOST and API_HOST from site.env when it exists; without it, the Caddyfile's live defaults apply.
+mkdir -p /etc/systemd/system/caddy.service.d
+printf '[Service]\nEnvironmentFile=-/etc/ekido/site.env\n' > /etc/systemd/system/caddy.service.d/ekido-site.conf
+systemctl daemon-reload
 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
 systemctl reload caddy || systemctl restart caddy
 

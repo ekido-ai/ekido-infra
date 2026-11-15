@@ -59,12 +59,15 @@ deploy() {
     fi
   fi
 }
+SITE_HOST=ekido.duckdns.org
+API_HOST=gpuchain.duckdns.org
+[ -f /etc/ekido/site.env ] && . /etc/ekido/site.env   # A staging server sets its own names here.
 deploy /opt/ekido/web ekido-web \
-  NEXT_PUBLIC_COORDINATOR_URL=https://gpuchain.duckdns.org/sepolia \
-  "NEXT_PUBLIC_COORDINATOR_WS=wss://gpuchain.duckdns.org/sepolia/ws/jobs/{job}" \
+  NEXT_PUBLIC_COORDINATOR_URL="https://$API_HOST/sepolia" \
+  "NEXT_PUBLIC_COORDINATOR_WS=wss://$API_HOST/sepolia/ws/jobs/{job}" \
   NEXT_PUBLIC_EVENT_SOURCE=live NEXT_PUBLIC_CHAIN_ID=84532 NEXT_PUBLIC_SIGNED_JOBS=1 \
   NEXT_PUBLIC_ESCROW_ADDRESS=0x1BF65f755457a92850009c88AFb337Ec57745a22
-for u in https://ekido.duckdns.org/ https://ekido.duckdns.org/chain; do
+for u in "https://$SITE_HOST/" "https://$SITE_HOST/chain"; do
   echo "$u $(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$u")"
 done
 exit $FAILED
