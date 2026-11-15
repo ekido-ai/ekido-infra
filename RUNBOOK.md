@@ -57,6 +57,21 @@ sudo systemctl start gpuchain-backup.service
 journalctl -u gpuchain-backup.service -n 10 --no-pager
 ```
 
+## Checkpoint storage: retention and limits
+
+Checkpoints are what let a job resume on another device, so they are never removed while a job could still need them. `gpuchain-retention.timer` runs `ekido_coordinator.retention` every day at 03:30 UTC:
+
+- A job in progress keeps every checkpoint newer than its newest accepted one, its last two accepted ones, and every rejected one (as evidence).
+- A job that has ended keeps everything for 7 days, then only its final model, until 90 days after it ended.
+- A blob no checkpoint points at is kept for 24 hours, because uploads land before their manifest commits.
+- Anything else moves to `/var/lib/gpuchain-sepolia/artifacts-quarantine/<date>/`. With `--apply`, quarantine folders older than 30 days are purged. Manifests and database rows are never removed.
+
+It ships as a **dry run** and only logs what it would move (`journalctl -u gpuchain-retention -n 5`). To turn it on, add `--apply` with `systemctl edit gpuchain-retention.service`. To put a quarantined blob back, use `ArtifactStore.restore(<sha256>)`, or move the file back under `artifacts/<first two hex>/`.
+
+Limits, set in `/etc/gpuchain/sepolia.env`:
+- `MAX_JOB_STORAGE_BYTES` (default 5 GiB) caps the checkpoint bytes one job keeps. A commit over it is refused with `STORAGE_QUOTA`.
+- `MAX_PENDING_UPLOAD_BYTES` (default 2 GiB) caps what one provider may upload before a checkpoint commit references it. Over it, the upload gets HTTP 413.
+
 ## Restoring
 
 1. Stop the coordinator: `sudo systemctl stop gpuchain-sepolia`.
