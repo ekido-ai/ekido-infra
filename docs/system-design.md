@@ -195,8 +195,8 @@ This is safe to retry at every step:
 - **Health:**
   - `/healthz` for liveness.
   - `/readyz` for readiness: DB, a disk write plus free space, RPC block age, coordinator gas, and settlement backlog. It returns 503 if any check fails.
-- **Monitor:** a systemd timer every 5 minutes checks `/readyz`, every service, the public URLs and disk use. Problems go to `journalctl -t gpuchain-monitor -p err` and `/var/lib/gpuchain-monitor/last.json`.
-- **Backups:** daily at 03:00 UTC, a consistent SQLite snapshot (integrity-checked, gzipped) plus an append-only artifact copy, under `/var/backups/gpuchain`, then copied to a private Cloud Storage bucket. The server's account can add objects but not delete them; snapshots expire after 90 days.
+- **Monitor:** a systemd timer every 5 minutes checks `/readyz`, every service, the public URLs and disk use. Problems go to `journalctl -t ekido-monitor -p err` and `/var/lib/ekido-monitor/last.json`.
+- **Backups:** daily at 03:00 UTC, a consistent SQLite snapshot (integrity-checked, gzipped) plus an append-only artifact copy, under `/var/backups/ekido`, then copied to a private Cloud Storage bucket. The server's account can add objects but not delete them; snapshots expire after 90 days.
 - **Alerts:** Cloud Monitoring uptime checks every 5 minutes, from several regions, on `/readyz` and the website. A failure from more than one region for 5 minutes emails the team.
 - **Restart:** every service, including the network's own CPU provider, is a systemd unit enabled at boot. A full VM restart on 10 Nov came back ready in about 2 minutes.
 - **Deploys:** guarded scripts that refuse to restart with a job in flight, keep the previous build outside the app, and roll back if a build fails.
