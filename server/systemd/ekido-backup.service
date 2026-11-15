@@ -1,0 +1,7 @@
+[Unit]
+Description=Ekido daily backup (coordinator DB and artifacts)
+
+[Service]
+Type=oneshot
+ExecStart=/opt/ekido-ops/ekido-backup.sh
+Nice=10

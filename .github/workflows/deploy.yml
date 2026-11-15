@@ -1,7 +1,7 @@
 name: Deploy
 
 # The server deploys itself: every 5 minutes it pulls the newest commit on main whose CI is green
-# (infra/gcp/ops/gpuchain-autodeploy.sh). GitHub holds no credential for it. This workflow waits for
+# (infra/server/ops/ekido-autodeploy.sh). GitHub holds no credential for it. This workflow waits for
 # that deploy, then confirms the live site is running this commit and is healthy.
 
 on:

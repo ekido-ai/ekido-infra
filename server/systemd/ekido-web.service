@@ -1,0 +1,17 @@
+[Unit]
+Description=Ekido Base Sepolia dashboard
+After=network-online.target
+
+[Service]
+User=ekido
+WorkingDirectory=/opt/ekido/web
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3101
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
