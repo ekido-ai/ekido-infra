@@ -1,10 +1,10 @@
-# Architecture — GPUChain
+# Architecture — Ekido
 
 A short map of the system. The full analysis (requirements, state ownership, failure modes, bottlenecks and scaling) is in [`docs/system-design.md`](docs/system-design.md).
 
 ## Overview
 
-GPUChain coordinates fine-tuning jobs across untrusted GPU providers. Three properties hold together:
+Ekido coordinates fine-tuning jobs across untrusted GPU providers. Three properties hold together:
 
 1. **Continuity:** a job survives the death of the GPU running it.
 2. **Quality:** work is paid only after it passes a test agreed before training.
@@ -16,7 +16,7 @@ The chain is the ledger for money. The coordinator's database is the orchestrati
 
 | Component | Path | Responsibility |
 |---|---|---|
-| Shared core | `packages/gpuchain_core/` | Job specs and policies, canonical JSON (RFC 8785), signing, the GPCK checkpoint format, the elastic compiler, quality statistics, the protocol fee, provider metadata |
+| Shared core | `packages/ekido_core/` | Job specs and policies, canonical JSON (RFC 8785), signing, the GPCK checkpoint format, the elastic compiler, quality statistics, the protocol fee, provider metadata |
 | Coordinator | `apps/coordinator/` | Job state machine, recovery orchestrator, scheduler, agent gateway (WebSocket), artifact store, quality and settlement services, chain indexer, rate limits, `/readyz` |
 | Provider agent | `workers/agent/` | Joins with a wallet-signed document, reports NVML telemetry, spawns the runtime (process or Docker), signs checkpoints, lists the provider on-chain |
 | Training runtime | `workers/runtime/` | Logical-step training loop, deterministic data order, checkpoint save and restore, memory probe |

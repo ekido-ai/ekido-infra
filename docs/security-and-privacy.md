@@ -17,7 +17,7 @@ Tokens are in-memory session tokens, not uniformly short-lived: verifier tokens 
 | A verifier | `/verifier/*` and artifacts | Signed sessions bound to the verifier for task claims, signed reports, and an allowlist |
 | Anyone | `/healthz` | Open, and shows nothing sensitive |
 
-The code is `apps/coordinator/gpuchain_coordinator/api_guard.py`, and its tests are in `apps/coordinator/tests/test_api_guard.py`.
+The code is `apps/coordinator/ekido_coordinator/api_guard.py`, and its tests are in `apps/coordinator/tests/test_api_guard.py`.
 
 **Before a hotspot or second-GPU session:** set a long random `API_TOKEN` in `.env`. Never share the coordinator's port through Live Share, or any forwarder that hides the outside client: that makes outside requests look local. A tunnel that adds `X-Forwarded-For`, which Cloudflare Tunnel and ngrok both do, is locked out of the operator API, as `test_a_tunnel_reaches_only_the_routes_with_their_own_proof` checks. Before relying on one, check that `GET /jobs` through it returns 401. `OPEN_API=1` turns the check off, and is only for a container whose port is published on `127.0.0.1`.
 
