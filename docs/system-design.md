@@ -162,7 +162,7 @@ This is safe to retry at every step:
 |---|---|---|
 | One coordinator holds sockets, queues and the event bus in memory | No second replica possible | Shard by job: each job is owned by one instance through a lease row in Postgres (`job_leases`, renewed every 10 s). Agents reconnect to any instance; a shared broker routes to the owner |
 | SQLite: one writer, one file | Concurrency and durability | Managed Postgres with point-in-time recovery; the models already use SQLAlchemy |
-| Artifacts on local disk | Disk loss; one machine serves all downloads | Retention and per-job quotas are done. Next: object storage (S3) behind the same SHA-256 interface, with presigned URLs so the coordinator doesn't relay bytes |
+| Artifacts on local disk | Disk loss; one machine serves all downloads | Done: retention, per-job quotas, and direct uploads to S3 through presigned links signed with each blob's SHA-256, so the coordinator doesn't relay bytes |
 | In-memory event bus | Can't fan out across replicas | Redis pub/sub or NATS, keyed by job |
 | Browser scans 900k+ blocks on each `/chain` load (about 20 RPC calls) | Public RPC limits as traffic grows | Done: a small indexer caches raw logs (5 confirmations) and serves them in one request; the browser checks the result against the contracts' own totals and rescans the chain if anything disagrees |
 | Verifier capacity | Two team-run verifiers | Already pull-based with leases, so more verifiers just claim more tasks. Pay them from the fee (3% proposed) |
