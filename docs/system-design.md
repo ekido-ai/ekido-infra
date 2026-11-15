@@ -148,7 +148,7 @@ This is safe to retry at every step:
 | A verifier dies | Fewer signatures | The lease expires and the other verifier re-claims; 2 of 3 still possible | If 2 die, settlement waits |
 | Coordinator process crashes | Scheduling stops; money safe | systemd restarts it in 15 s; proposals restored from DB; agents reconnect | In-flight evaluations re-queue |
 | VM dies | Scheduling stops; money safe | Manual rebuild. A timeout refund is permissionless | **Single point of failure** |
-| Disk lost | Job history and checkpoints lost; money safe on-chain | Daily backups, copied to a private Cloud Storage bucket the server can't delete from | Restore not yet rehearsed from the bucket |
+| Disk lost | Job history and checkpoints lost; money safe on-chain | Daily backups, copied to a private S3 bucket the server can't delete from; the AWS move on 15 Nov restored from a backup | Single region |
 | RPC outage | Settlement delayed | Retries; `/readyz` reports it | One RPC per service; add fallback |
 | Coordinator out of gas | Settlement can't submit | `/readyz` flags it under 0.002 ETH, and the uptime check emails the team | Gas top-up is manual |
 | Coordinator key stolen | Can start jobs and anchor events; **can't move funds** | Rotate via the owner | Owner is one key; multisig needed |
@@ -162,7 +162,7 @@ This is safe to retry at every step:
 |---|---|---|
 | One coordinator holds sockets, queues and the event bus in memory | No second replica possible | Shard by job: each job is owned by one instance through a lease row in Postgres (`job_leases`, renewed every 10 s). Agents reconnect to any instance; a shared broker routes to the owner |
 | SQLite: one writer, one file | Concurrency and durability | Managed Postgres with point-in-time recovery; the models already use SQLAlchemy |
-| Artifacts on local disk | Disk loss; one machine serves all downloads | Object storage (GCS) behind the same SHA-256 interface; signed URLs so the coordinator doesn't relay bytes |
+| Artifacts on local disk | Disk loss; one machine serves all downloads | Retention and per-job quotas are done. Next: object storage (S3) behind the same SHA-256 interface, with presigned URLs so the coordinator doesn't relay bytes |
 | In-memory event bus | Can't fan out across replicas | Redis pub/sub or NATS, keyed by job |
 | Browser scans 900k+ blocks on each `/chain` load (about 20 RPC calls) | Public RPC limits as traffic grows | Done: a small indexer caches raw logs (5 confirmations) and serves them in one request; the browser checks the result against the contracts' own totals and rescans the chain if anything disagrees |
 | Verifier capacity | Two team-run verifiers | Already pull-based with leases, so more verifiers just claim more tasks. Pay them from the fee (3% proposed) |
@@ -190,14 +190,17 @@ This is safe to retry at every step:
   - Docker sandbox available: no network, read-only, capped memory.
   - Checkpoints are safetensors only, validated before loading.
 
-## 9. Operations (live since 9 and 10 Nov)
+## 9. Operations (live since 9 and 10 Nov, on AWS since 15 Nov)
+
+- **Server:** one EC2 instance in Mumbai (`ap-south-1`) with no SSH port. It is managed only through SSM, its secrets live in SSM Parameter Store, and `infra/server/bootstrap.sh` plus `restore.sh` rebuild it from scratch.
 
 - **Health:**
   - `/healthz` for liveness.
   - `/readyz` for readiness: DB, a disk write plus free space, RPC block age, coordinator gas, and settlement backlog. It returns 503 if any check fails.
 - **Monitor:** a systemd timer every 5 minutes checks `/readyz`, every service, the public URLs and disk use. Problems go to `journalctl -t ekido-monitor -p err` and `/var/lib/ekido-monitor/last.json`.
-- **Backups:** daily at 03:00 UTC, a consistent SQLite snapshot (integrity-checked, gzipped) plus an append-only artifact copy, under `/var/backups/ekido`, then copied to a private Cloud Storage bucket. The server's account can add objects but not delete them; snapshots expire after 90 days.
-- **Alerts:** Cloud Monitoring uptime checks every 5 minutes, from several regions, on `/readyz` and the website. A failure from more than one region for 5 minutes emails the team.
+- **Backups:** daily at 03:00 UTC, a consistent SQLite snapshot (integrity-checked, gzipped) plus an append-only artifact copy, under `/var/backups/ekido`, then copied to a private, encrypted S3 bucket. The server's role can add objects but not delete them; snapshots expire after 90 days.
+- **Retention:** a daily timer applies the checkpoint keep rules (recent and last two accepted checkpoints while a job runs, only the final model for 90 days after it ends) and moves anything else to a quarantine kept for 30 days. Per-job and per-upload storage caps stop one job from filling the disk.
+- **Alerts:** a GitHub Actions workflow checks `/readyz` and the site pages every 15 minutes, and a failure emails the admins. An AWS budget emails the team at 50, 80 and 100% of the monthly limit.
 - **Restart:** every service, including the network's own CPU provider, is a systemd unit enabled at boot. A full VM restart on 10 Nov came back ready in about 2 minutes.
 - **Deploys:** guarded scripts that refuse to restart with a job in flight, keep the previous build outside the app, and roll back if a build fails.
 
@@ -206,7 +209,8 @@ This is safe to retry at every step:
 | Phase | Change | Why |
 |---|---|---|
 | A, done | Readiness, monitor, backups, hardened join, security headers | Know when it breaks; don't lose history |
-| A, done (10 Nov) | Off-site backup copy (GCS bucket); email alerts from uptime checks | Disk-loss safety; a human hears about it |
+| A, done (10 Nov) | Off-site backup copy; email alerts from uptime checks | Disk-loss safety; a human hears about it |
+| A, done (15 Nov) | Move to AWS with no SSH; checkpoint retention, quarantine and storage caps; budget alerts | Simpler, safer operations; storage that stays bounded |
 | B | Postgres, object storage, job leases, shared event bus, a second coordinator | Remove the single point of failure |
 | B, partly done | Indexer with browser checks (done); per-client rate limits (done); edge limits in Caddy | Read path scales without trusting us |
 | C | Multisig owner, independent paid verifiers, slashing | Decentralize the parts we run today |

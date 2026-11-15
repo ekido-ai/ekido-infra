@@ -1,4 +1,4 @@
-# Python packages for the coordinator, verifiers and smoke provider on the server, pinned to what the GCP server
+# Python packages for the coordinator, verifiers and smoke provider on the server, pinned to what the server
 # ran on 15 Nov 2026 (pip freeze of /opt/ekido/venv). CPU-only torch.
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.15.0+cpu
