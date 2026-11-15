@@ -59,13 +59,15 @@ echo "== dashboard"
 mkdir -p "$WEB"
 rsync -a --delete --exclude node_modules --exclude .next "$SRC/apps/web-combined/" "$WEB/"
 chown -R ekido:ekido "$WEB"
-sudo -u ekido bash -c "cd '$WEB' && npm ci --no-audit --no-fund >/tmp/ekido-npm-ci.log 2>&1"
+# Logs go to /var/log and are opened by root here. In /tmp, a log left by another user can't be overwritten
+# (fs.protected_regular), which stopped a bootstrap once.
+sudo -u ekido bash -c "cd '$WEB' && npm ci --no-audit --no-fund" >/var/log/ekido-npm-ci.log 2>&1 || { tail -30 /var/log/ekido-npm-ci.log; exit 1; }
 sudo -u ekido env -C "$WEB" \
   NEXT_PUBLIC_COORDINATOR_URL=https://gpuchain.duckdns.org/sepolia \
   "NEXT_PUBLIC_COORDINATOR_WS=wss://gpuchain.duckdns.org/sepolia/ws/jobs/{job}" \
   NEXT_PUBLIC_EVENT_SOURCE=live NEXT_PUBLIC_CHAIN_ID=84532 NEXT_PUBLIC_SIGNED_JOBS=1 \
   NEXT_PUBLIC_ESCROW_ADDRESS=0x1BF65f755457a92850009c88AFb337Ec57745a22 \
-  npx next build >/tmp/ekido-next-build.log 2>&1 || { tail -30 /tmp/ekido-next-build.log; exit 1; }
+  npx next build >/var/log/ekido-next-build.log 2>&1 || { tail -30 /var/log/ekido-next-build.log; exit 1; }
 
 echo "== units and ops scripts"
 for u in "$SRC"/infra/server/systemd/ekido-*; do
