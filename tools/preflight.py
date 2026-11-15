@@ -45,7 +45,7 @@ def free_ram_gb() -> float | None:
             if line.startswith("MemAvailable:"):
                 return int(line.split()[1]) / 2**20
     except OSError:
-        pass
+        pass  # No /proc/meminfo here; the function returns None, meaning unknown.
     return None
 
 
