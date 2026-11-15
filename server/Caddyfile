@@ -1,0 +1,37 @@
+(secure) {
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
+# Base Sepolia: the coordinator under /sepolia (port 8003) and its dashboard on 3101.
+# ekido.duckdns.org is the site. gpuchain.duckdns.org is the API and provider domain only: it serves /sepolia and
+# /deploy, and redirects everything else to ekido.duckdns.org. The coordinator allows the ekido.duckdns.org origin
+# through CORS_ORIGINS in /etc/ekido/coordinator.env.
+gpuchain.duckdns.org, ekido.duckdns.org {
+	import secure
+	encode gzip
+	# The commit the server is running, published by infra/server/ops/ekido-autodeploy.sh.
+	handle_path /deploy/* {
+		@version path /version.json
+		handle @version {
+			header Cache-Control "no-store"
+			root * /var/lib/ekido-autodeploy/public
+			file_server
+		}
+		respond 404
+	}
+	handle_path /sepolia/* {
+		reverse_proxy 127.0.0.1:8003
+	}
+	@apihost host gpuchain.duckdns.org
+	handle @apihost {
+		redir https://ekido.duckdns.org{uri} 308
+	}
+	handle {
+		reverse_proxy 127.0.0.1:3101
+	}
+}

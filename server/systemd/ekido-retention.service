@@ -1,0 +1,16 @@
+[Unit]
+Description=Ekido checkpoint retention (moves checkpoint blobs no job needs any more to quarantine)
+After=ekido-coordinator.service
+
+[Service]
+Type=oneshot
+# Reads the coordinator's database and moves files inside its state folder, so it runs as root, not as the
+# coordinator's dynamic user. Rules: apps/coordinator/ekido_coordinator/retention.py.
+WorkingDirectory=/opt/ekido
+Environment=PYTHONPATH=/opt/ekido/apps/coordinator:/opt/ekido/packages/ekido_core
+Environment=DATABASE_URL=sqlite:////var/lib/ekido-coordinator/jobs.db
+Environment=ARTIFACT_DIR=/var/lib/ekido-coordinator/artifacts
+# Dry run: it only logs what it would move. After a week of sensible logs, turn it on with a drop-in:
+#   systemctl edit ekido-retention.service   ->   [Service] / ExecStart= / ExecStart=... -m ekido_coordinator.retention --apply
+ExecStart=/opt/ekido/venv/bin/python -m ekido_coordinator.retention
+Nice=10

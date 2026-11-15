@@ -1,0 +1,25 @@
+[Unit]
+Description=Ekido Base Sepolia verifier %i
+After=ekido-coordinator.service
+Requires=ekido-coordinator.service
+
+[Service]
+DynamicUser=true
+User=ekido-verifier-%i
+WorkingDirectory=/opt/ekido
+StateDirectory=ekido-verifier-%i
+StateDirectoryMode=0700
+Environment=PYTHONPATH=/opt/ekido/workers/verifier:/opt/ekido/workers/runtime:/opt/ekido/packages/ekido_core
+Environment=VERIFIER_STATE_DIR=/var/lib/ekido-verifier-%i
+Environment=HF_HOME=/var/lib/ekido-verifier-%i/huggingface
+EnvironmentFile=/etc/ekido/verifier-%i.env
+ExecStart=/opt/ekido/venv/bin/python -m ekido_verifier.worker --coordinator http://127.0.0.1:8003 --device cpu
+Restart=on-failure
+RestartSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

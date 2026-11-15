@@ -1,0 +1,25 @@
+[Unit]
+Description=Ekido Base Sepolia coordinator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+DynamicUser=true
+User=ekido-coordinator
+WorkingDirectory=/opt/ekido
+StateDirectory=ekido-coordinator
+StateDirectoryMode=0700
+Environment=PYTHONPATH=/opt/ekido/apps/coordinator:/opt/ekido/packages/ekido_core
+Environment=DATABASE_URL=sqlite:////var/lib/ekido-coordinator/jobs.db
+Environment=ARTIFACT_DIR=/var/lib/ekido-coordinator/artifacts
+EnvironmentFile=/etc/ekido/coordinator.env
+ExecStart=/opt/ekido/venv/bin/python infra/server/sepolia_coordinator.py
+Restart=on-failure
+RestartSec=15
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
