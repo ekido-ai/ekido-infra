@@ -42,7 +42,7 @@ echo "== source: the release in $INFRA_REPO deploy.json ($INFRA_REF)"
 SRC=$(mktemp -d); RELEASE_LIB=$(mktemp); trap 'rm -rf "$SRC" "$RELEASE_LIB"' EXIT
 if [[ "$INFRA_REF" =~ ^[0-9a-f]{40}$ ]]; then INFRA_SHA=$INFRA_REF
 else INFRA_SHA=$(git ls-remote "https://github.com/$INFRA_REPO" "refs/$INFRA_REF" | cut -f1); fi
-curl -fsSL --max-time 30 "https://raw.githubusercontent.com/$INFRA_REPO/$INFRA_SHA/server/ops/ekido-release.sh" > "$RELEASE_LIB"
+curl -fsSL --max-time 30 "https://raw.githubusercontent.com/$INFRA_REPO/$INFRA_SHA/server/ops/ekido-release.sh" | tr -d "" > "$RELEASE_LIB"
 # shellcheck source=ops/ekido-release.sh
 . "$RELEASE_LIB"
 release_resolve "$SRC/.release.json" "$INFRA_SHA"
