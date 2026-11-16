@@ -12,7 +12,7 @@
     {"name": "workers", "repo": "ekido-ai/ekido-workers", "ref": "heads/main", "checks": ["Python (agent)", "Python (runtime)", "Python (verifier)"],
      "map": [["agent", "workers/agent"], ["runtime", "workers/runtime"], ["verifier", "workers/verifier"]]},
     {"name": "inference", "repo": "ekido-ai/ekido-inference", "ref": "heads/main", "checks": ["Inference (Rust)"],
-     "map": [["Cargo.toml", "apps/inference/Cargo.toml"], ["Cargo.lock", "apps/inference/Cargo.lock"], [".gitignore", "apps/inference/.gitignore"], ["src", "apps/inference/src"]]},
+     "map": [["Cargo.toml", "apps/inference/Cargo.toml"], ["Cargo.lock", "apps/inference/Cargo.lock"], ["src", "apps/inference/src"]]},
     {"name": "web", "repo": "ekido-ai/ekido-web", "ref": "heads/main", "checks": ["Web app"],
      "map": [[".", "apps/web-combined"]]}
   ]
