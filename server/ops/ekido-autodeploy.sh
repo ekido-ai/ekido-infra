@@ -61,7 +61,8 @@ log "${SHA:0:7}: CI green"
 # ── 2. What changed: compare the new source with what is running, file by file ──
 SRC=$(mktemp -d); trap 'rm -rf "$SRC"' EXIT
 curl -fsSL --max-time 120 "https://codeload.github.com/$REPO/tar.gz/$SHA" | tar -xz -C "$SRC" --strip-components=1
-DIRS=(apps/coordinator/ekido_coordinator packages/ekido_core/ekido_core workers/agent/ekido_agent workers/runtime/ekido_runtime workers/verifier/ekido_verifier)
+# apps/coordinator/alembic holds the database migrations, which the coordinator unit applies before it starts.
+DIRS=(apps/coordinator/ekido_coordinator apps/coordinator/alembic packages/ekido_core/ekido_core workers/agent/ekido_agent workers/runtime/ekido_runtime workers/verifier/ekido_verifier)
 WEB_LIVE=/opt/ekido/web
 same() { diff -rq --strip-trailing-cr --exclude tests --exclude __pycache__ "$1" "$2" >/dev/null 2>&1; }
 

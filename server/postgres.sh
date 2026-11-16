@@ -42,8 +42,8 @@ chmod 600 /etc/ekido/database.env
 echo "== migrations"
 set -a; . /etc/ekido/database.env; set +a
 cd /opt/ekido/apps/coordinator
-PYTHONPATH=/opt/ekido/apps/coordinator:/opt/ekido/packages/ekido_core "$PY" -m alembic -c alembic.ini upgrade head
-PYTHONPATH=/opt/ekido/apps/coordinator:/opt/ekido/packages/ekido_core "$PY" -m alembic -c alembic.ini current
+PYTHONPATH=/opt/ekido/apps/coordinator:/opt/ekido/packages/ekido_core "$PY" -m alembic -c alembic/alembic.ini upgrade head
+PYTHONPATH=/opt/ekido/apps/coordinator:/opt/ekido/packages/ekido_core "$PY" -m alembic -c alembic/alembic.ini current
 
 echo "== restart on Postgres"
 systemctl daemon-reload
