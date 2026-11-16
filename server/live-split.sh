@@ -22,7 +22,16 @@ echo "== 0. checks"
 avail=$(awk '/MemAvailable/ {print int($2/1024)}' /proc/meminfo); echo "memory available: ${avail} MB"
 [ "$avail" -ge 3000 ] || { echo "not enough memory"; exit 1; }
 [ -f "$DB" ] || { echo "no SQLite file at $DB"; exit 1; }
-busy=$(curl -sf --max-time 10 'http://127.0.0.1:8003/jobs?limit=200' | jq '[.[] | select(.state as $s | ["ASSIGNED","RUNNING","RECOVERING","VALIDATING"] | index($s))] | length')
+# Same rule as ekido-autodeploy.sh: a job counts only while it still has compute in flight inside its deadline. A job
+# left in RUNNING or VALIDATING past its deadline (a demo leftover) isn't computing; it is copied as it is.
+busy=0
+list=$(curl -sf --max-time 10 'http://127.0.0.1:8003/jobs?limit=200') || { echo "coordinator unreadable"; exit 1; }
+now=$(date -u +%s)
+for id in $(jq -r '.[] | select(.state as $s | ["ASSIGNED","RUNNING","RECOVERING","VALIDATING"] | index($s)) | .job_id' <<<"$list"); do
+  deadline=$(curl -sf --max-time 10 "http://127.0.0.1:8003/jobs/$id" | jq -r '.deadline // empty')
+  [ -n "$deadline" ] || { echo "job $id has no readable deadline"; exit 1; }
+  if [ "$(date -u -d "$deadline" +%s)" -gt "$now" ]; then busy=$((busy + 1)); else echo "job $id is past its deadline ($deadline); not computing"; fi
+done
 echo "jobs computing: $busy"; [ "$busy" = 0 ] || { echo "a job is computing; try later"; exit 1; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 curl -fsSL "$RAW/ops/ekido-release.sh" | tr -d '\r' > "$T/lib.sh"; . "$T/lib.sh"
