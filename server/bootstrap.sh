@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Builds the Ekido Base Sepolia server on a fresh Ubuntu 24.04 instance from one commit of the public repo.
-# Run as root, for example through SSM Run Command (no SSH):
-#   bash bootstrap.sh <commit-sha>
+# Builds the Ekido Base Sepolia server on a fresh Ubuntu 24.04 instance from the release in ekido-infra's deploy.json
+# (every Ekido repo pinned to a commit; see ops/ekido-release.sh). Run as root, for example through SSM (no SSH):
+#   bash bootstrap.sh              # deploy.json on ekido-infra main
+#   bash bootstrap.sh <infra-sha>  # deploy.json at one ekido-infra commit
 #
 # Layout: the coordinator, two verifiers and the smoke provider run from /opt/ekido, the dashboard from /opt/ekido/web,
 # Caddy in front, and the auto-deploy, backup, monitor and retention timers from /opt/ekido-ops. The units are
@@ -14,8 +15,8 @@
 #   - starting services: done once the secrets and data are in place.
 # Safe to run again: it installs what's missing and refreshes code, units and scripts.
 set -euo pipefail
-SHA="${1:?usage: bootstrap.sh <commit-sha>}"
-REPO="${EKIDO_REPO:-ekido-ai/Ekido}"
+INFRA_REF="${1:-heads/main}"
+INFRA_REPO="${EKIDO_INFRA_REPO:-ekido-ai/ekido-infra}"
 APP=/opt/ekido
 WEB=/opt/ekido/web
 OPS=/opt/ekido-ops
@@ -37,9 +38,17 @@ if ! command -v caddy >/dev/null; then
 fi
 command -v aws >/dev/null || snap install aws-cli --classic   # used by ekido-backup.sh for S3
 
-echo "== source $REPO@${SHA:0:7}"
-SRC=$(mktemp -d); trap 'rm -rf "$SRC"' EXIT
-curl -fsSL --max-time 180 "https://codeload.github.com/$REPO/tar.gz/$SHA" | tar -xz -C "$SRC" --strip-components=1
+echo "== source: the release in $INFRA_REPO deploy.json ($INFRA_REF)"
+SRC=$(mktemp -d); RELEASE_LIB=$(mktemp); trap 'rm -rf "$SRC" "$RELEASE_LIB"' EXIT
+if [[ "$INFRA_REF" =~ ^[0-9a-f]{40}$ ]]; then INFRA_SHA=$INFRA_REF
+else INFRA_SHA=$(git ls-remote "https://github.com/$INFRA_REPO" "refs/$INFRA_REF" | cut -f1); fi
+curl -fsSL --max-time 30 "https://raw.githubusercontent.com/$INFRA_REPO/$INFRA_SHA/server/ops/ekido-release.sh" > "$RELEASE_LIB"
+# shellcheck source=ops/ekido-release.sh
+. "$RELEASE_LIB"
+release_resolve "$SRC/.release.json" "$INFRA_SHA"
+release_assemble "$SRC/.release.json" "$SRC"
+SHA=$(release_id "$SRC/.release.json")
+jq -r '.repos[] | "  " + .name + ": " + .repo + "@" + .sha[0:7]' "$SRC/.release.json"
 id ekido >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin ekido
 
 echo "== services' code and Python"
@@ -85,14 +94,16 @@ for u in "$SRC"/infra/server/systemd/ekido-*; do
   sed 's/\r$//' "$u" > "/etc/systemd/system/$(basename "$u")"; chmod 0644 "/etc/systemd/system/$(basename "$u")"
 done
 mkdir -p "$OPS"
-for f in ekido-autodeploy.sh ekido-web-deploy.sh ekido-backup.sh ekido-monitor.sh; do
+for f in ekido-release.sh ekido-autodeploy.sh ekido-web-deploy.sh ekido-backup.sh ekido-monitor.sh; do
   sed 's/\r$//' "$SRC/infra/server/ops/$f" > "$OPS/$f"; chmod 0755 "$OPS/$f"; bash -n "$OPS/$f"
 done
 
 echo "== auto-deploy state"
 mkdir -p /var/lib/ekido-autodeploy/public && chmod 755 /var/lib/ekido-autodeploy /var/lib/ekido-autodeploy/public
 echo "$SHA" > /var/lib/ekido-autodeploy/deployed
-printf '{"sha":"%s","deployed_at":"%s","python":true,"web":true}\n' "$SHA" "$(date -u +%FT%TZ)" > /var/lib/ekido-autodeploy/public/version.json
+jq -n --arg sha "$SHA" --arg at "$(date -u +%FT%TZ)" --slurpfile rel "$SRC/.release.json" \
+  '{sha: $sha, deployed_at: $at, python: true, web: true, repos: ($rel[0].repos | map({key: .repo, value: .sha}) | from_entries)}' \
+  > /var/lib/ekido-autodeploy/public/version.json
 chmod 644 /var/lib/ekido-autodeploy/public/version.json
 
 echo "== caddy"
@@ -108,4 +119,4 @@ systemctl daemon-reload
 systemctl enable ekido-coordinator ekido-platform ekido-inference ekido-verifier@1 ekido-verifier@2 ekido-web \
   ekido-smoke-provider ekido-autodeploy.timer ekido-backup.timer ekido-monitor.timer \
   ekido-retention.timer >/dev/null 2>&1
-echo "Bootstrap done for ${SHA:0:7}. Next: secrets, data, escrow ABI, then start the services."
+echo "Bootstrap done for release ${SHA:0:7}. Next: secrets, data, escrow ABI, then start the services."

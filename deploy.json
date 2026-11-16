@@ -1,0 +1,19 @@
+{
+  "_about": "What the servers run. Each repo deploys from a branch (heads/...) or a tag (tags/...), only when the listed CI checks passed on that commit. 'map' places the repo's files into the server layout (/opt/ekido), applied in this order. Read by server/ops/ekido-release.sh.",
+  "repos": [
+    {"name": "infra", "repo": "ekido-ai/ekido-infra", "ref": "heads/main", "checks": ["Scripts"],
+     "map": [["server", "infra/server"]]},
+    {"name": "core", "repo": "ekido-ai/Ekido", "ref": "tags/v0.4.0", "checks": [],
+     "map": [["packages/ekido_core", "packages/ekido_core"]]},
+    {"name": "coordinator", "repo": "ekido-ai/ekido-coordinator", "ref": "heads/main", "checks": ["Python (coordinator)", "Postgres"],
+     "map": [[".", "apps/coordinator"], ["sepolia_coordinator.py", "infra/server/sepolia_coordinator.py"]]},
+    {"name": "platform", "repo": "ekido-ai/ekido-platform", "ref": "heads/main", "checks": ["Python (platform)", "Postgres"],
+     "map": [[".", "apps/platform"]]},
+    {"name": "workers", "repo": "ekido-ai/ekido-workers", "ref": "heads/main", "checks": ["Python (agent)", "Python (runtime)", "Python (verifier)"],
+     "map": [["agent", "workers/agent"], ["runtime", "workers/runtime"], ["verifier", "workers/verifier"]]},
+    {"name": "inference", "repo": "ekido-ai/ekido-inference", "ref": "heads/main", "checks": ["Inference (Rust)"],
+     "map": [["Cargo.toml", "apps/inference/Cargo.toml"], ["Cargo.lock", "apps/inference/Cargo.lock"], [".gitignore", "apps/inference/.gitignore"], ["src", "apps/inference/src"]]},
+    {"name": "web", "repo": "ekido-ai/ekido-web", "ref": "heads/main", "checks": ["Web app"],
+     "map": [[".", "apps/web-combined"]]}
+  ]
+}

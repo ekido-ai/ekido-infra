@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Pull-based continuous deployment for the hosted Base Sepolia network.
 #
-# Every few minutes (ekido-autodeploy.timer) this checks the newest commit on main. It deploys only when every
-# required CI check on that commit has passed, and never holds a GitHub credential: the repository is public, so it
-# reads the commit, its check runs and the source archive anonymously. Nothing in GitHub can reach into this server.
+# Every few minutes (ekido-autodeploy.timer) this reads deploy.json in ekido-infra, which names the branch or tag
+# each Ekido repo deploys from, and pins every repo to its newest commit (ekido-release.sh). It deploys only when the
+# checks listed for each repo passed on that repo's commit, and never holds a GitHub credential: the repos are public,
+# so it reads commits, check runs and source archives anonymously. Nothing in GitHub can reach into this server.
+# The repos are placed in the same layout as the old single repo (apps/..., workers/..., infra/server), so the steps
+# below compare and install exactly as before. A release is the set of commits, named by a short id.
 #
 # Python services: refused while a job is unfinished (retried next run); the previous code is backed up and put back
 # if /readyz isn't ready within a minute. Web apps: rebuilt with the previous build kept and restored on failure; a
@@ -11,16 +14,13 @@
 # Python dependency changes (pyproject.toml) are never deployed automatically.
 set -euo pipefail
 
-REPO="${EKIDO_REPO:-ekido-ai/Ekido}"
-BRANCH="${EKIDO_BRANCH:-main}"
 STATE=/var/lib/ekido-autodeploy
 PUBLIC="$STATE/public"
 APP=/opt/ekido
 BACKUPS=/opt/ekido-backups
 WEB_DEPLOY=/opt/ekido-ops/ekido-web-deploy.sh
-REQUIRED='["Python (core)","Python (runtime)","Python (agent)","Python (coordinator)","Python (verifier)","Web app","Contracts"]'
-API="https://api.github.com/repos/$REPO"
-CURL=(curl -fsS --max-time 30 -H "Accept: application/vnd.github+json" -H "User-Agent: ekido-autodeploy")
+# shellcheck source=ekido-release.sh
+. /opt/ekido-ops/ekido-release.sh
 
 mkdir -p "$STATE" "$PUBLIC" "$BACKUPS"
 chmod 755 "$STATE" "$PUBLIC"
@@ -32,35 +32,34 @@ fail() {
   logger -p err -t ekido-autodeploy "$*"; echo "$SHA" > "$STATE/failed"
   # Publish the failure next to the running version, so the GitHub deploy check can stop waiting and say why.
   if [ -f "$PUBLIC/version.json" ]; then
-    jq --arg sha "$SHA" --arg why "$*" '. + {failed_sha: $sha, failed_reason: $why}' "$PUBLIC/version.json" > "$PUBLIC/version.json.tmp" \
+    local repos='{}'
+    [ -s "${RELEASE:-}" ] && repos=$(jq -c '.repos | map({key: .repo, value: .sha}) | from_entries' "$RELEASE")
+    jq --arg sha "$SHA" --arg why "$*" --argjson repos "$repos" '. + {failed_sha: $sha, failed_repos: $repos, failed_reason: $why}' "$PUBLIC/version.json" > "$PUBLIC/version.json.tmp" \
       && chmod 644 "$PUBLIC/version.json.tmp" && mv "$PUBLIC/version.json.tmp" "$PUBLIC/version.json"
   fi
   exit 1
 }
 
-SHA=$(git ls-remote "https://github.com/$REPO" "refs/heads/$BRANCH" | cut -f1)
-[ -n "$SHA" ] || { echo "could not read $BRANCH"; exit 1; }
+SRC=$(mktemp -d); trap 'rm -rf "$SRC"' EXIT
+RELEASE="$SRC/.release.json"
+mkdir -p "$SRC"
+release_resolve "$RELEASE" || { echo "could not resolve the release from deploy.json"; exit 1; }
+SHA=$(release_id "$RELEASE")   # the release id; ${SHA:0:7} in the messages below
 LAST=$(cat "$STATE/deployed" 2>/dev/null || true)
-[ "$SHA" = "$LAST" ] && { [ "$DRY" = 1 ] && echo "${SHA:0:7} is already deployed"; exit 0; }
-[ "$DRY" != 1 ] && [ "$SHA" = "$(cat "$STATE/failed" 2>/dev/null || true)" ] && exit 0   # don't retry a commit that already failed
+[ "$SHA" = "$LAST" ] && { [ "$DRY" = 1 ] && echo "release $SHA is already deployed"; exit 0; }
+[ "$DRY" != 1 ] && [ "$SHA" = "$(cat "$STATE/failed" 2>/dev/null || true)" ] && exit 0   # don't retry a release that already failed
+log "release $SHA: $(jq -r '[.repos[] | "\(.name)@\(.sha[0:7])"] | join(" ")' "$RELEASE")"
 
-# ── 1. CI must be green ────────────────────────────────────────────────────
-RUNS=$("${CURL[@]}" "$API/commits/$SHA/check-runs?per_page=100")
-VERDICT=$(jq -r --argjson need "$REQUIRED" '
-  [.check_runs[] | {name, status, conclusion}] as $runs
-  | [$need[] as $n | ($runs | map(select(.name == $n)) | first)] as $mine
-  | if any($mine[]; . == null or .status != "completed") then "wait"
-    elif all($mine[]; .conclusion == "success") then "green"
-    else "red" end' <<<"$RUNS")
+# ── 1. CI must be green on every repo's commit ───────────────────────────────
+VERDICT=$(release_ci "$RELEASE")
 case "$VERDICT" in
   wait) log "${SHA:0:7}: CI still running"; exit 0 ;;
-  red) fail "${SHA:0:7}: CI failed, not deploying" ;;
+  red*) fail "${SHA:0:7}: CI failed on ${VERDICT#red }, not deploying" ;;
 esac
 log "${SHA:0:7}: CI green"
 
 # ── 2. What changed: compare the new source with what is running, file by file ──
-SRC=$(mktemp -d); trap 'rm -rf "$SRC"' EXIT
-curl -fsSL --max-time 120 "https://codeload.github.com/$REPO/tar.gz/$SHA" | tar -xz -C "$SRC" --strip-components=1
+release_assemble "$RELEASE" "$SRC" || fail "${SHA:0:7}: could not download the release"
 # apps/coordinator/alembic holds the database migrations, which the coordinator unit applies before it starts.
 DIRS=(apps/coordinator/ekido_coordinator apps/coordinator/alembic apps/platform/ekido_platform apps/platform/alembic packages/ekido_core/ekido_core workers/agent/ekido_agent workers/runtime/ekido_runtime workers/verifier/ekido_verifier)
 WEB_LIVE=/opt/ekido/web
@@ -167,7 +166,8 @@ fi
 # ── 5. Record it ────────────────────────────────────────────────────────────
 echo "$SHA" > "$STATE/deployed"
 rm -f "$STATE/failed"
-jq -n --arg sha "$SHA" --arg at "$(date -u +%FT%TZ)" --arg py "$PY" --arg web "$WEB" \
-  '{sha: $sha, deployed_at: $at, python: ($py == "yes"), web: ($web == "yes")}' > "$PUBLIC/version.json.tmp"
+jq -n --arg sha "$SHA" --arg at "$(date -u +%FT%TZ)" --arg py "$PY" --arg web "$WEB" --slurpfile rel "$RELEASE" \
+  '{sha: $sha, deployed_at: $at, python: ($py == "yes"), web: ($web == "yes"),
+    repos: ($rel[0].repos | map({key: .repo, value: .sha}) | from_entries)}' > "$PUBLIC/version.json.tmp"
 chmod 644 "$PUBLIC/version.json.tmp"; mv "$PUBLIC/version.json.tmp" "$PUBLIC/version.json"
 log "${SHA:0:7}: deployed"
