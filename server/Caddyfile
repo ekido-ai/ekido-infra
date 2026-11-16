@@ -26,6 +26,12 @@
 		}
 		respond 404
 	}
+	# The Platform API (accounts, teams, keys, billing) answers the public /v1 contract; Caddy picks the longer path
+	# first, so /sepolia/v1/* goes there and everything else under /sepolia/* to the Coordinator.
+	handle /sepolia/v1/* {
+		uri strip_prefix /sepolia
+		reverse_proxy 127.0.0.1:8010
+	}
 	handle_path /sepolia/* {
 		reverse_proxy 127.0.0.1:8003
 	}

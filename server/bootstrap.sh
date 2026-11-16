@@ -44,7 +44,7 @@ id ekido >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nol
 
 echo "== services' code and Python"
 mkdir -p "$APP/infra/server" "$APP/contracts"
-for d in apps/coordinator packages/ekido_core workers/agent workers/runtime workers/verifier; do
+for d in apps/coordinator apps/platform packages/ekido_core workers/agent workers/runtime workers/verifier; do
   mkdir -p "$APP/$d"
   rsync -a --delete --exclude tests --exclude __pycache__ "$SRC/$d/" "$APP/$d/"
 done
@@ -54,6 +54,14 @@ install -m 0644 "$SRC/infra/server/sepolia_coordinator.py" "$APP/infra/server/se
 "$APP/venv/bin/python" -m pip install -q -r "$SRC/infra/server/requirements.txt"
 "$APP/venv/bin/python" -m compileall -q "$APP/apps" "$APP/packages" "$APP/workers" "$APP/infra/server/sepolia_coordinator.py" >/dev/null
 [ -f "$APP/contracts/out/GPUChainEscrow.sol/GPUChainEscrow.json" ] || echo "NOTE: escrow ABI missing at $APP/contracts/out; copy it before starting the coordinator"
+
+echo "== inference (Rust)"
+# rustup's own installer from the official site, minimal profile, for root only (auto-deploy builds as root).
+[ -x /root/.cargo/bin/cargo ] || curl -fsSL --proto '=https' --tlsv1.2 https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable >/dev/null
+mkdir -p "$APP/apps/inference" /opt/ekido/bin
+rsync -a --delete --exclude target "$SRC/apps/inference/" "$APP/apps/inference/"
+(cd "$APP/apps/inference" && CARGO_TARGET_DIR=/var/cache/ekido-inference-build nice /root/.cargo/bin/cargo build --release --locked -q)
+install -m 0755 /var/cache/ekido-inference-build/release/ekido-inference /opt/ekido/bin/ekido-inference
 
 echo "== dashboard"
 SITE_HOST=ekido.duckdns.org
@@ -97,7 +105,7 @@ caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
 systemctl reload caddy || systemctl restart caddy
 
 systemctl daemon-reload
-systemctl enable ekido-coordinator ekido-verifier@1 ekido-verifier@2 ekido-web \
+systemctl enable ekido-coordinator ekido-platform ekido-inference ekido-verifier@1 ekido-verifier@2 ekido-web \
   ekido-smoke-provider ekido-autodeploy.timer ekido-backup.timer ekido-monitor.timer \
   ekido-retention.timer >/dev/null 2>&1
 echo "Bootstrap done for ${SHA:0:7}. Next: secrets, data, escrow ABI, then start the services."

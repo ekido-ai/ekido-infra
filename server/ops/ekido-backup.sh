@@ -15,9 +15,10 @@ DEST=/var/backups/ekido
 STAMP=$(date -u +%Y%m%d-%H%M%S)
 mkdir -p "$DEST/db" "$DEST/artifacts"
 if [[ "$DATABASE_URL" == postgresql* ]]; then
-  # A consistent dump in Postgres's compressed custom format; pg_restore --list proves it's readable.
-  SNAP="$DEST/db/jobs-$STAMP.pgdump"
-  pg_dump --format=custom --no-owner --file="$SNAP" "${DATABASE_URL/postgresql+psycopg/postgresql}"
+  # The whole database (every service's schema), as the postgres admin: each service's own user can see only its
+  # schema. Postgres's compressed custom format; pg_restore --list proves it's readable.
+  SNAP="$DEST/db/ekido-$STAMP.pgdump"
+  runuser -u postgres -- pg_dump --format=custom ekido > "$SNAP"
   pg_restore --list "$SNAP" >/dev/null
 else
 SNAP="$DEST/db/jobs-$STAMP.db.gz"
