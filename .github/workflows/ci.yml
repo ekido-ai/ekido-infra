@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scripts:
+    name: Scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Every shell script parses
+        run: |
+          set -e
+          for f in $(git ls-files '*.sh'); do bash -n "$f" && echo "ok $f"; done
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Every Python file compiles
+        run: python -m compileall -q server e2e experiments tools
