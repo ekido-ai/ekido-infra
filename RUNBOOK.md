@@ -98,7 +98,7 @@ Money is never in the database: balances live in the escrow contract, so a resto
 
 ### Postgres
 
-A server set up with `infra/server/postgres.sh` keeps the coordinator's data in Postgres 16 on the same box (localhost only). `DATABASE_URL` lives in `/etc/ekido/database.env` (mode 600). Alembic migrations in `apps/coordinator/alembic` own the schema, and the coordinator unit applies them before every start. A schema change is a new migration (`python -m alembic -c alembic.ini revision --autogenerate -m "..."`), and CI's `Postgres` job checks that the migrations match the models.
+A server set up with `infra/server/postgres.sh` keeps the coordinator's data in Postgres 16 on the same box (localhost only). `DATABASE_URL` lives in `/etc/ekido/database.env` (mode 600). Alembic migrations in `apps/coordinator/alembic` own the schema, and the coordinator unit applies them before every start. A schema change is a new migration (`python -m alembic -c alembic/alembic.ini revision --autogenerate -m "..."`), and CI's `Postgres` job checks that the migrations match the models.
 
 The nightly backup takes `pg_dump --format=custom` to `/var/backups/ekido/db/jobs-<stamp>.pgdump`, checks it with `pg_restore --list`, and copies it to S3 when a bucket is set.
 

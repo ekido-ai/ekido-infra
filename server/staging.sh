@@ -41,6 +41,9 @@ with open("/etc/ekido/coordinator.env", "w") as handle:
     handle.write(f"CORS_ORIGINS={json.dumps([f'https://{site}'])}\n")
     handle.write(f"VERIFIER_ADDRESSES={','.join(addresses)}\n")
     handle.write("VERIFIER_QUORUM=2\n")
+    # Accounts: sign-in links point at the staging site, and go to the server log until SES is set up.
+    handle.write(f"SITE_URL=https://{site}\n")
+    handle.write("EMAIL_SENDER=log\n")
 print("wrote coordinator.env and two verifier keys")
 PY
 fi
