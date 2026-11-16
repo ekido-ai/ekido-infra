@@ -67,6 +67,8 @@ migrate() {  # migrate <app folder> <env file>
 migrate coordinator /etc/ekido/database.env
 migrate platform /etc/ekido/database-platform.env
 
+# NO_RESTART=1: leave the services stopped, for example to copy old SQLite data in first (ops/sqlite-to-postgres.py).
+if [ "${NO_RESTART:-0}" = 1 ]; then echo "== NO_RESTART=1: services not restarted"; exit 0; fi
 echo "== restart on Postgres"
 systemctl daemon-reload
 systemctl restart ekido-coordinator ekido-platform
