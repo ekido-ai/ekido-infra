@@ -1,0 +1,30 @@
+[Unit]
+Description=Ekido Platform API (accounts, teams, API keys, billing; /sepolia/v1/* through Caddy)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+DynamicUser=true
+User=ekido-platform
+WorkingDirectory=/opt/ekido/apps/platform
+StateDirectory=ekido-platform
+StateDirectoryMode=0700
+Environment=PYTHONPATH=/opt/ekido/apps/platform:/opt/ekido/packages/ekido_core
+# SQLite until postgres.sh writes database-platform.env (its own Postgres user, which sees only the platform schema).
+Environment=DATABASE_URL=sqlite:////var/lib/ekido-platform/platform.db
+# Not secret: SITE_URL, EMAIL_SENDER, EMAIL_FROM, CORS_ORIGINS.
+EnvironmentFile=-/etc/ekido/platform.env
+EnvironmentFile=-/etc/ekido/database-platform.env
+ExecStartPre=/bin/sh -c '[ -s /etc/ekido/database-platform.env ] || exit 0; exec /opt/ekido/venv/bin/python -m alembic -c alembic/alembic.ini upgrade head'
+ExecStart=/opt/ekido/venv/bin/python -m uvicorn ekido_platform.main:create_app --factory --host 127.0.0.1 --port 8010
+Restart=on-failure
+RestartSec=10
+# A hard cap: a leak or a flood restarts this service instead of starving the coordinator or the database.
+MemoryMax=512M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
