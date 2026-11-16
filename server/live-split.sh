@@ -82,11 +82,13 @@ fi
 
 echo "== 6. start and check"
 systemctl daemon-reload
-systemctl restart ekido-coordinator ekido-platform ekido-inference
+# Never stop half-way here: a failed restart is reported below, and the other services still start.
+set +e
+systemctl restart ekido-coordinator ekido-platform ekido-inference || echo "a restart failed; see systemctl status"
 for port in 8003 8010; do
   for _ in $(seq 1 60); do [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$port/readyz")" = 200 ] && break; sleep 2; done
 done
-systemctl restart ekido-verifier@1 ekido-verifier@2 ekido-smoke-provider ekido-web
+systemctl restart ekido-verifier@1 ekido-verifier@2 ekido-smoke-provider ekido-web || echo "a restart failed; see systemctl status"
 sleep 8
 for port in 8003 8010; do echo "readyz $port: $(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$port/readyz")"; done
 echo "inference: $(curl -s --max-time 5 http://127.0.0.1:8020/healthz)"
@@ -94,6 +96,9 @@ echo "jobs via the API: $(curl -sf --max-time 10 'http://127.0.0.1:8003/jobs?lim
 systemctl is-active ekido-coordinator ekido-platform ekido-inference ekido-verifier@1 ekido-verifier@2 ekido-web ekido-smoke-provider caddy | tr '\n' ' '; echo
 echo "site: $(curl -s -o /dev/null -w '%{http_code}' --max-time 20 https://ekido.duckdns.org/)  api: $(curl -s -o /dev/null -w '%{http_code}' --max-time 20 https://gpuchain.duckdns.org/sepolia/readyz)"
 [ "$rc" = 0 ] || { echo "RESULT: copy failed, running on SQLite; backups in $KEEP"; exit 1; }
+for port in 8003 8010; do
+  [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$port/readyz")" = 200 ] || { echo "RESULT: copied, but $port is not ready; auto-deploy left off; backups in $KEEP"; exit 1; }
+done
 systemctl enable --now ekido-autodeploy.timer
 echo "autodeploy timer: $(systemctl is-active ekido-autodeploy.timer)"
 echo "RESULT: ok (backups in $KEEP)"

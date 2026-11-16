@@ -64,6 +64,9 @@ release_assemble() {
   while IFS= read -r entry; do
     repo=$(jq -r .repo <<<"$entry"); sha=$(jq -r .sha <<<"$entry")
     tmp=$(mktemp -d)
+    # mktemp makes the folder 0700; a "." map copies the folder's own mode with cp -a, which left apps/coordinator
+    # and apps/platform unreadable to their services on 16 Nov (status=200/CHDIR). Code folders are 0755.
+    chmod 755 "$tmp"
     curl -fsSL --max-time 180 "https://codeload.github.com/$repo/tar.gz/$sha" | tar -xz -C "$tmp" --strip-components=1 || { rm -rf "$tmp"; return 1; }
     while IFS=$'\t' read -r from to; do
       [ -e "$tmp/$from" ] || { echo "$repo@${sha:0:7} has no $from" >&2; rm -rf "$tmp"; return 1; }
