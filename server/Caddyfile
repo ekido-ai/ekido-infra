@@ -11,6 +11,9 @@
 # ekido.duckdns.org is the site. gpuchain.duckdns.org is the API and provider domain only: it serves /sepolia and
 # /deploy, and redirects everything else to ekido.duckdns.org. The coordinator allows the ekido.duckdns.org origin
 # through CORS_ORIGINS in /etc/ekido/coordinator.env.
+# The site itself calls the API on its own host (https://SITE_HOST/sepolia), so nothing it loads is cross-site:
+# browser shields that block cross-site requests and WebSockets (Brave's, for one) don't break it. Providers and
+# agents keep using API_HOST.
 # The host names come from /etc/ekido/site.env (SITE_HOST, API_HOST) through a caddy drop-in, and default to the
 # live names, so a staging server serves the same layout under its own names.
 {$API_HOST:gpuchain.duckdns.org}, {$SITE_HOST:ekido.duckdns.org} {

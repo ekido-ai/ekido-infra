@@ -83,8 +83,8 @@ chown -R ekido:ekido "$WEB"
 # (fs.protected_regular), which stopped a bootstrap once.
 sudo -u ekido bash -c "cd '$WEB' && npm ci --no-audit --no-fund" >/var/log/ekido-npm-ci.log 2>&1 || { tail -30 /var/log/ekido-npm-ci.log; exit 1; }
 sudo -u ekido env -C "$WEB" \
-  NEXT_PUBLIC_COORDINATOR_URL="https://$API_HOST/sepolia" \
-  "NEXT_PUBLIC_COORDINATOR_WS=wss://$API_HOST/sepolia/ws/jobs/{job}" \
+  NEXT_PUBLIC_COORDINATOR_URL="https://$SITE_HOST/sepolia" \
+  "NEXT_PUBLIC_COORDINATOR_WS=wss://$SITE_HOST/sepolia/ws/jobs/{job}" \
   NEXT_PUBLIC_EVENT_SOURCE=live NEXT_PUBLIC_CHAIN_ID=84532 NEXT_PUBLIC_SIGNED_JOBS=1 \
   NEXT_PUBLIC_ESCROW_ADDRESS=0x1BF65f755457a92850009c88AFb337Ec57745a22 \
   npx next build >/var/log/ekido-next-build.log 2>&1 || { tail -30 /var/log/ekido-next-build.log; exit 1; }
