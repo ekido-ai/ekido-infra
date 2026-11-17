@@ -158,7 +158,9 @@ inference-authority documentation to provision job-owned model manifests and
 local engines. Use Postgres for the per-key lock and usage records.
 
 Deploy the matching Platform and inference changes together before directing
-customer traffic to the new Caddy routes. Check `/readyz` on the private
+customer traffic to the new Caddy routes. Install the updated systemd units,
+run `systemctl daemon-reload`, validate the updated Caddyfile, and reload Caddy
+as part of the coordinated rollout. Check `/readyz` on the private
 inference listener, key authorization, usage finalization and a real model
 request on staging; an unconfigured service intentionally returns unavailable.
 Pending usage reservations need reconciliation after router failures.
