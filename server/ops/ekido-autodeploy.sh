@@ -70,13 +70,30 @@ if [ -f "$APP/apps/coordinator/pyproject.toml" ] && ! same "$SRC/apps/coordinato
   fail "${SHA:0:7}: coordinator dependencies changed; deploy this one by hand (see RUNBOOK.md)"
 fi
 
-PY=no; WEB=no; DEPS=no
+PY=no; WEB=no; DEPS=no; OPS=/opt/ekido-ops; OPS_CHANGED=()
 for d in "${DIRS[@]}"; do same "$SRC/$d" "$APP/$d" || PY=yes; done
 same "$SRC/infra/server/sepolia_coordinator.py" "$APP/infra/server/sepolia_coordinator.py" || PY=yes
 for p in src public next.config.ts; do same "$SRC/apps/web-combined/$p" "$WEB_LIVE/$p" || WEB=yes; done
 for f in package.json package-lock.json; do same "$SRC/apps/web-combined/$f" "$WEB_LIVE/$f" || { WEB=yes; DEPS=yes; }; done
-log "${SHA:0:7}: python=$PY web=$WEB web_dependencies=$DEPS"
+for f in ekido-release.sh ekido-autodeploy.sh ekido-web-deploy.sh ekido-backup.sh ekido-monitor.sh; do
+  [ -f "$SRC/infra/server/ops/$f" ] && ! cmp -s <(sed 's/\r$//' "$SRC/infra/server/ops/$f") "$OPS/$f" && OPS_CHANGED+=("$f")
+done
+# The web build script sets the addresses baked into the site, so a change to it means a rebuild.
+[[ " ${OPS_CHANGED[*]} " == *" ekido-web-deploy.sh "* ]] && WEB=yes
+log "${SHA:0:7}: python=$PY web=$WEB web_dependencies=$DEPS ops=${OPS_CHANGED[*]:-none}"
 [ "$DRY" = 1 ] && { log "dry run: stopping before any change"; exit 0; }
+
+# ── 2b. Ops scripts: run the release's own deploy, backup and monitor scripts ──
+# Installed before anything is deployed, so a changed web build script is the one this run uses. A script that
+# doesn't parse is refused and the installed one kept. mv swaps the file, so the copy of this script that is running
+# now keeps reading the old one; the new one runs from the next timer tick.
+for f in "${OPS_CHANGED[@]}"; do
+  tmp="$OPS/.$f.new"
+  sed 's/\r$//' "$SRC/infra/server/ops/$f" > "$tmp"
+  bash -n "$tmp" || { rm -f "$tmp"; fail "${SHA:0:7}: ops/$f does not parse; kept the installed one"; }
+  chmod 0755 "$tmp"; mv "$tmp" "$OPS/$f"
+  log "${SHA:0:7}: installed ops/$f"
+done
 
 # ── 3. Python services ──────────────────────────────────────────────────────
 UNITS=(ekido-coordinator ekido-platform ekido-verifier@1 ekido-verifier@2 ekido-smoke-provider)
