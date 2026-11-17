@@ -144,3 +144,21 @@ When `/readyz` reports low coordinator gas, send a little Base Sepolia test ETH 
 - A rehearsed restore of a backup snapshot onto a fresh instance. (The 15 Nov move used the same scripts with a live copy.)
 - Postgres with point-in-time recovery, job leases and a second coordinator, so one server is no longer a single point of failure.
 - Automatic gas top-up.
+
+## Inference gateway configuration
+
+The model gateway is disabled until both the Platform authority and inference
+router have matching operator-managed secrets and model manifests. Provision
+root-owned `/etc/ekido/inference-platform.env` and `/etc/ekido/inference.env`
+with restrictive permissions; never put real secrets in the repository.
+Platform needs `INFERENCE_MODELS_ROOT` and `INFERENCE_INTERNAL_TOKEN`. The
+router needs `EKIDO_INFERENCE_AUTHORITY_URL=http://127.0.0.1:8010` and
+`EKIDO_INFERENCE_INTERNAL_TOKEN` set to the same secret. Follow the Platform
+inference-authority documentation to provision job-owned model manifests and
+local engines. Use Postgres for the per-key lock and usage records.
+
+Deploy the matching Platform and inference changes together before directing
+customer traffic to the new Caddy routes. Check `/readyz` on the private
+inference listener, key authorization, usage finalization and a real model
+request on staging; an unconfigured service intentionally returns unavailable.
+Pending usage reservations need reconciliation after router failures.

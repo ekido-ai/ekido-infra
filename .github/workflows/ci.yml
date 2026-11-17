@@ -24,3 +24,9 @@ jobs:
           python-version: "3.12"
       - name: Every Python file compiles
         run: python -m compileall -q server e2e experiments tools
+      - name: Verify inference and platform proxy routes
+        run: |
+          curl -fsSL https://github.com/caddyserver/caddy/releases/download/v2.11.9/caddy_2.11.9_linux_amd64.tar.gz -o /tmp/caddy.tar.gz
+          echo '0e85544340290a16ce4bfb76fe7d65e9de1bf3a6e67f5ccfff30b30d27ea4c73e078077b7bf3e58ae60b6b12e44327705287059c775bca5782e8ee85ea7edd75  /tmp/caddy.tar.gz' | sha512sum -c -
+          mkdir /tmp/caddy-test && tar -xzf /tmp/caddy.tar.gz -C /tmp/caddy-test caddy
+          CADDY_BIN=/tmp/caddy-test/caddy python -m unittest discover -s server/tests -p 'test_caddy_inference_routes.py' -v
