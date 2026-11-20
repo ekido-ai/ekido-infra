@@ -10,6 +10,8 @@ StateDirectory=ekido-inference
 StateDirectoryMode=0700
 Environment=EKIDO_INFERENCE_ADDR=127.0.0.1:8020
 Environment=RUST_LOG=info
+# Operator-managed configuration and shared secret; absent keeps inference disabled.
+EnvironmentFile=-/etc/ekido/inference.env
 ExecStart=/opt/ekido/bin/ekido-inference
 Restart=on-failure
 RestartSec=10
