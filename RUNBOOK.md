@@ -131,6 +131,32 @@ sudo rm /var/lib/ekido-autodeploy/failed                    # retry a refused co
 
 Installed by `infra/server/bootstrap.sh`, which also records the commit it built from as the one already running.
 
+## Sign-in email
+
+Platform emails sign-in links through Amazon SES (ap-south-1), using the instance role. Both servers set this in `/etc/ekido/platform.env`:
+
+```
+EMAIL_SENDER=ses
+EMAIL_FROM="Ekido <teamekido@gmail.com>"
+EMAIL_REGION=ap-south-1
+```
+
+- **Sender:** `teamekido@gmail.com` is verified in SES. If a sign-in email says it was sent but doesn't arrive, check that it is still verified (`aws sesv2 get-email-identity --email-identity teamekido@gmail.com`).
+- **Permission:** the instance roles (`ekido-server`, `ekido-staging`) carry the inline policy `ekido-send-email`, which allows `ses:SendEmail` and `ses:SendRawEmail` only.
+- **Sandbox:** until AWS grants production access (requested 20 Nov), SES delivers only to verified addresses. Add a tester with `aws sesv2 create-email-identity --email-identity <their address>`; they then click AWS's confirmation link.
+- **`EMAIL_SENDER=log`** writes the link to the Platform journal instead of sending it. Use it on a test box only, never on live.
+- **The From address is a team mailbox,** never a person's own account.
+
+## Python packages on the servers
+
+The autodeploy updates code, but it doesn't install Python packages. When a service adds a dependency, install it in `/opt/ekido/venv` on both servers **before** merging. Otherwise the service restarts into an `ImportError`.
+
+```
+sudo /opt/ekido/venv/bin/pip install '<package spec from pyproject.toml>'
+```
+
+On 20 Nov, `fpdf2>=2.8,<3` (Platform's invoice PDFs) was installed this way. `pyrage` (core v0.4.3's encryption) is still needed before `deploy.json` moves to core v0.4.3.
+
 ## Restarting the server
 
 A full restart takes about 2 minutes; every service above starts on its own. The Elastic IP stays attached, so DNS keeps working.

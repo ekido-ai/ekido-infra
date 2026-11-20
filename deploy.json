@@ -3,7 +3,7 @@
   "repos": [
     {"name": "infra", "repo": "ekido-ai/ekido-infra", "ref": "heads/main", "checks": ["Scripts"],
      "map": [["server", "infra/server"]]},
-    {"name": "core", "repo": "ekido-ai/ekido-core", "ref": "tags/v0.4.1", "checks": [],
+    {"name": "core", "repo": "ekido-ai/ekido-core", "ref": "tags/v0.4.3", "checks": [],
      "map": [["packages/ekido_core", "packages/ekido_core"]]},
     {"name": "coordinator", "repo": "ekido-ai/ekido-coordinator", "ref": "heads/main", "checks": ["Python (coordinator)", "Postgres"],
      "map": [[".", "apps/coordinator"], ["sepolia_coordinator.py", "infra/server/sepolia_coordinator.py"]]},

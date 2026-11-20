@@ -73,7 +73,8 @@ fi
 PY=no; WEB=no; DEPS=no; OPS=/opt/ekido-ops; OPS_CHANGED=()
 for d in "${DIRS[@]}"; do same "$SRC/$d" "$APP/$d" || PY=yes; done
 same "$SRC/infra/server/sepolia_coordinator.py" "$APP/infra/server/sepolia_coordinator.py" || PY=yes
-for p in src public next.config.ts; do same "$SRC/apps/web-combined/$p" "$WEB_LIVE/$p" || WEB=yes; done
+# messages/ holds the site text (next-intl); a page can't build without it.
+for p in src public next.config.ts messages; do same "$SRC/apps/web-combined/$p" "$WEB_LIVE/$p" || WEB=yes; done
 for f in package.json package-lock.json; do same "$SRC/apps/web-combined/$f" "$WEB_LIVE/$f" || { WEB=yes; DEPS=yes; }; done
 for f in ekido-release.sh ekido-autodeploy.sh ekido-web-deploy.sh ekido-backup.sh ekido-monitor.sh; do
   [ -f "$SRC/infra/server/ops/$f" ] && ! cmp -s <(sed 's/\r$//' "$SRC/infra/server/ops/$f") "$OPS/$f" && OPS_CHANGED+=("$f")
@@ -149,11 +150,12 @@ fi
 # ── 4. Web apps ─────────────────────────────────────────────────────────────
 if [ "$WEB" = yes ]; then
   TGZ="$STATE/web-src.tgz"
+  EXTRA=(); [ -d "$SRC/apps/web-combined/messages" ] && EXTRA=(messages)
   if [ "$DEPS" = yes ]; then
-    tar -czf "$TGZ" -C "$SRC/apps/web-combined" src next.config.ts public package.json package-lock.json
+    tar -czf "$TGZ" -C "$SRC/apps/web-combined" src next.config.ts public "${EXTRA[@]}" package.json package-lock.json
     bash "$WEB_DEPLOY" "$TGZ" deps || fail "${SHA:0:7}: web dependencies or build failed; previous version kept"
   else
-    tar -czf "$TGZ" -C "$SRC/apps/web-combined" src next.config.ts public
+    tar -czf "$TGZ" -C "$SRC/apps/web-combined" src next.config.ts public "${EXTRA[@]}"
     bash "$WEB_DEPLOY" "$TGZ" || fail "${SHA:0:7}: web build failed; previous build kept"
   fi
   log "${SHA:0:7}: web apps deployed"
