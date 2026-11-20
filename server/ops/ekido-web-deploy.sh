@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Rebuilds the web app from a source archive. Used by ekido-autodeploy.sh and by hand.
-#   ekido-web-deploy.sh /path/to/web-src.tgz          # src, next.config.ts, public
+#   ekido-web-deploy.sh /path/to/web-src.tgz          # src, next.config.ts, public (and messages, when the archive has it)
 #   ekido-web-deploy.sh /path/to/web-src.tgz deps     # also package.json and package-lock.json, then npm ci
 # The previous src, .next, next.config.ts (and with deps, node_modules and the package files) are kept outside the
 # app, never deleted. A service is restarted only after its build succeeds; otherwise everything is put back.
@@ -21,12 +21,19 @@ deploy() {
   cd "$dir" || { FAILED=1; return; }
   local bk="/opt/ekido-web-backups/$svc"
   mkdir -p "$bk" && chown ekido "$bk" /opt/ekido-web-backups
-  for old in src.bak-* src.failed-* .next.bak-* .next.failed-* next.config.ts.bak-*; do [ -e "$old" ] && as mv "$old" "$bk/"; done
+  for old in src.bak-* src.failed-* messages.bak-* messages.failed-* .next.bak-* .next.failed-* next.config.ts.bak-*; do [ -e "$old" ] && as mv "$old" "$bk/"; done
   as cp -a src "$bk/src.bak-$STAMP"
   as cp -a .next "$bk/.next.bak-$STAMP"
   as cp next.config.ts "$bk/next.config.ts.bak-$STAMP"
   as mv src "$bk/src.replaced-$STAMP"
   local files=(src next.config.ts public)
+  # The site text (next-intl) lives in messages/. Older archives don't have it, so it's optional.
+  local msgs=no
+  if tar -tzf "$TGZ" messages >/dev/null 2>&1; then
+    msgs=yes
+    files+=(messages)
+    [ -e messages ] && as cp -a messages "$bk/messages.bak-$STAMP" && as mv messages "$bk/messages.replaced-$STAMP"
+  fi
   if [ "$DEPS" = deps ]; then
     as cp package.json "$bk/package.json.bak-$STAMP"
     as cp package-lock.json "$bk/package-lock.json.bak-$STAMP"
@@ -49,6 +56,10 @@ deploy() {
     FAILED=1
     echo "restoring the previous version"
     as mv src "$bk/src.failed-$STAMP"; as cp -a "$bk/src.bak-$STAMP" src
+    if [ "$msgs" = yes ]; then
+      [ -e messages ] && as mv messages "$bk/messages.failed-$STAMP"
+      [ -e "$bk/messages.bak-$STAMP" ] && as cp -a "$bk/messages.bak-$STAMP" messages
+    fi
     as mv .next "$bk/.next.failed-$STAMP"; as cp -a "$bk/.next.bak-$STAMP" .next
     as cp "$bk/next.config.ts.bak-$STAMP" next.config.ts
     if [ "$DEPS" = deps ]; then
