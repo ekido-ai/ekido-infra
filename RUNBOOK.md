@@ -133,19 +133,27 @@ Installed by `infra/server/bootstrap.sh`, which also records the commit it built
 
 ## Sign-in email
 
-Platform emails sign-in links through Amazon SES (ap-south-1), using the instance role. Both servers set this in `/etc/ekido/platform.env`:
+Platform emails sign-in links (and team invites) through the team Gmail, `teamekido@gmail.com`, over SMTP with a Google app password. Both servers set this in `/etc/ekido/platform.env` (mode 600):
 
 ```
-EMAIL_SENDER=ses
+EMAIL_SENDER=smtp
 EMAIL_FROM="Ekido <teamekido@gmail.com>"
-EMAIL_REGION=ap-south-1
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=teamekido@gmail.com
+SMTP_PASSWORD=<app password, written by the server from Parameter Store>
 ```
 
-- **Sender:** `teamekido@gmail.com` is verified in SES. If a sign-in email says it was sent but doesn't arrive, check that it is still verified (`aws sesv2 get-email-identity --email-identity teamekido@gmail.com`).
-- **Permission:** the instance roles (`ekido-server`, `ekido-staging`) carry the inline policy `ekido-send-email`, which allows `ses:SendEmail` and `ses:SendRawEmail` only.
-- **Sandbox:** until AWS grants production access (requested 20 Nov), SES delivers only to verified addresses. Add a tester with `aws sesv2 create-email-identity --email-identity <their address>`; they then click AWS's confirmation link.
+- **The app password** lives only in Parameter Store as the SecureString `/ekido/server/smtp-password`. Each server reads it there and writes it into its own env file; it never goes through a laptop, a command line or chat.
+  - To rotate it: make a new app password on the team Google account, update the parameter in the console, then run the same server-side step again and restart `ekido-platform`.
+  - Live reads it with its `/ekido/*` permission. Staging has the inline policy `ekido-read-smtp-password`, which covers only this parameter.
+- **A failed send** answers `503 EMAIL_NOT_SENT` with a plain message, and logs only the error type, never the link or password.
+- **SES is the fallback** (`EMAIL_SENDER=ses`, `EMAIL_REGION=ap-south-1`).
+  - `teamekido@gmail.com` is verified there, and production access was requested on 20 Nov. Until AWS grants it, SES delivers only to verified addresses.
+  - The roles carry the inline policy `ekido-send-email` (`ses:SendEmail` and `ses:SendRawEmail` only).
 - **`EMAIL_SENDER=log`** writes the link to the Platform journal instead of sending it. Use it on a test box only, never on live.
 - **The From address is a team mailbox,** never a person's own account.
+- **Gmail limits:** about 500 messages a day. Move to SES (or a domain sender) before real customer volume.
 
 ## Python packages on the servers
 
