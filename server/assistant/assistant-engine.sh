@@ -18,7 +18,6 @@ LOCK="$HERE/models.lock.json"
 ROOT=/opt/llama.cpp
 MODELS=/var/lib/ekido-models
 ENVF=/etc/ekido/assistant-engine.env
-PY=/opt/ekido/venv/bin/python
 [ "$(id -u)" = 0 ] || { echo "run as root"; exit 1; }
 lock() { python3 -c "import json,sys; d=json.load(open('$LOCK')); print(eval(sys.argv[1], {'d': d}))" "$1"; }
 
@@ -41,11 +40,29 @@ build() {
   local src="$ROOT/src-$tag"
   [ -d "$src/.git" ] || git clone -q --depth 1 --branch "$tag" "$(lock "d['llama_cpp']['repo']")" "$src"
   git -C "$src" rev-parse HEAD > "$ROOT/bin/COMMIT"
-  cmake -S "$src" -B "$src/build" -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF -DGGML_NATIVE=ON >/dev/null
-  cmake --build "$src/build" --target llama-server -j 2 >/dev/null
-  install -m 0755 "$src/build/bin/llama-server" "$ROOT/bin/llama-server"
+  # No web UI: by default the build downloads a prebuilt UI from a Hugging Face bucket (unpinned, and on 24 Nov it came
+  # back incomplete and failed the build). Our engines answer Platform on loopback only, with --no-webui anyway.
+  local b="$src/build-server" log="$ROOT/build-$tag.log"
+  if ! { cmake -S "$src" -B "$b" -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF -DGGML_NATIVE=ON \
+           -DLLAMA_USE_PREBUILT_UI=OFF -DLLAMA_BUILD_UI=OFF \
+         && cmake --build "$b" --target llama-server -j 2; } > "$log" 2>&1; then
+    grep -iE "error|fatal" "$log" | head -15; echo "build failed; the full log is $log"; exit 1
+  fi
+  install -m 0755 "$b/bin/llama-server" "$ROOT/bin/llama-server"
   echo "$tag" > "$ROOT/bin/TAG"
   echo "built llama-server $tag ($(cut -c1-12 "$ROOT/bin/COMMIT"))"
+}
+
+convert_env() {  # convert_env <tag>: the converter's own Python environment, from llama.cpp's own requirements file
+  local tag=$1 venv="$ROOT/venv-$1"
+  [ -x "$venv/bin/python" ] && [ -f "$venv/.ready" ] && return
+  need_disk 2
+  apt-get install -y -q python3-venv >/dev/null
+  python3 -m venv "$venv"
+  # The services' environment (/opt/ekido/venv) is never touched; this one only converts weights.
+  "$venv/bin/pip" install -q --upgrade pip
+  "$venv/bin/pip" install -q -r "$ROOT/src-$tag/requirements/requirements-convert_hf_to_gguf.txt"
+  touch "$venv/.ready"
 }
 
 fetch_one() {  # fetch_one <name>
@@ -69,7 +86,9 @@ fetch_one() {  # fetch_one <name>
   if [ "$convert" = True ]; then
     local quant; quant=$(lock "d['models']['$name']['quant']")
     local tag; tag=$(lock "d['llama_cpp']['tag']")
-    PYTHONPATH="$ROOT/src-$tag/gguf-py" "$PY" "$ROOT/src-$tag/convert_hf_to_gguf.py" "$dir" --outtype "$quant" --outfile "$out.part" >/dev/null
+    convert_env "$tag"
+    PYTHONPATH="$ROOT/src-$tag/gguf-py" "$ROOT/venv-$tag/bin/python" "$ROOT/src-$tag/convert_hf_to_gguf.py" "$dir" \
+      --outtype "$quant" --outfile "$out.part" >/dev/null
     mv "$out.part" "$out"
   else
     ln -sf "$dir/$files" "$out"
