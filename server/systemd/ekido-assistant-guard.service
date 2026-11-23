@@ -1,0 +1,26 @@
+[Unit]
+Description=Ekido assistant guard (Qwen3Guard on llama.cpp; screens every assistant message)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=ekido-llm
+# GUARD_MODEL, written by server/assistant/assistant-engine.sh.
+EnvironmentFile=/etc/ekido/assistant-engine.env
+# Loopback only. A small context: the guard sees one message at a time.
+ExecStart=/opt/llama.cpp/bin/llama-server -m ${GUARD_MODEL} --host 127.0.0.1 --port 8031 --threads 2 --ctx-size 2048 --parallel 1 --no-webui
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# About 0.65 GB of weights plus the context.
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target

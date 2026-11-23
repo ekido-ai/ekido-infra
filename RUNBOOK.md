@@ -198,3 +198,26 @@ as part of the coordinated rollout. Check `/readyz` on the private
 inference listener, key authorization, usage finalization and a real model
 request on staging; an unconfigured service intentionally returns unavailable.
 Pending usage reservations need reconciliation after router failures.
+
+## Assistant engines (llama.cpp)
+
+The assistant runs two local models, each in its own systemd unit, on loopback only:
+
+| Unit | Model | Port | Memory cap |
+|---|---|---|---|
+| `ekido-assistant-guard` | Qwen3Guard-Gen-0.6B, the safety screen in front of every message | 8031 | 1 GB |
+| `ekido-assistant` | the bake-off winner, which picks the recipe | 8032 | 3.2 GB |
+
+`server/assistant/assistant-engine.sh` builds `llama-server` from source at the pinned tag in `server/assistant/models.lock.json`. It downloads each model from its pinned Hugging Face commit, checks every weights file's sha256, and converts with llama.cpp's own converter when there's no official GGUF. It never deletes anything; a file that fails its check is kept as `*.bad`.
+
+```
+sudo bash assistant-engine.sh build                       # once per llama.cpp tag (about 15 minutes on 2 vCPU)
+sudo bash assistant-engine.sh fetch guard qwen2.5-1.5b    # any names from models.lock.json
+sudo bash assistant-engine.sh install                     # units; the guard starts once its model is there
+sudo bash assistant-engine.sh use qwen2.5-1.5b            # switch the assistant model (bake-off, then the winner)
+sudo bash assistant-engine.sh status
+```
+
+Platform reaches them through `ASSISTANT_GUARD_URL=http://127.0.0.1:8031` and `ASSISTANT_ENGINE_URL=http://127.0.0.1:8032` in `/etc/ekido/platform.env`. Without them, the assistant answers 503 (fail closed).
+
+**Disk:** on 24 Nov staging's root volume was grown from 30 to 49 GB, online, to hold the build and the bake-off candidates.
