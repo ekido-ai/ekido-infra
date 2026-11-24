@@ -47,6 +47,9 @@ with open("/etc/ekido/coordinator.env", "w") as handle:
 print("wrote coordinator.env and two verifier keys")
 PY
 fi
+# Job keys (ticket A12): the coordinator refuses to start unless job keys have a wrapper that survives a restart (no default, no throwaway key).
+# Staging wraps them with the KMS key alias/ekido-data. Added once, also to a coordinator.env that was made before this line existed.
+grep -q '^JOB_KEY_WRAP=' /etc/ekido/coordinator.env || printf 'JOB_KEY_WRAP=kms\n' >> /etc/ekido/coordinator.env
 chmod 600 /etc/ekido/coordinator.env /etc/ekido/verifier-1.env /etc/ekido/verifier-2.env
 umask 022
 : > /etc/ekido/backup.env   # No off-site copy for staging.

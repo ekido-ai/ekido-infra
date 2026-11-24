@@ -64,6 +64,9 @@ uvicorn==0.54.0
 web3==8.0.0
 websockets==17.4
 yarl==1.25.1
+# age encryption for per-job keys (ekido-core v0.4.3, ekido_core.jobkeys). The autodeploy does not install packages: on a running server run
+# `sudo /opt/ekido/venv/bin/pip install 'pyrage==1.4.0'` before merging the coordinator change that needs it (RUNBOOK, "Job keys").
+pyrage==1.4.0
 # S3 client for direct checkpoint uploads (ARTIFACT_S3_BUCKET).
 boto3==1.40.70
 botocore==1.40.76
