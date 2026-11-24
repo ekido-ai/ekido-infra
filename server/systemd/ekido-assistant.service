@@ -1,0 +1,27 @@
+[Unit]
+Description=Ekido assistant engine (llama.cpp; picks the recipe for a customer's request)
+After=network-online.target
+Wants=network-online.target
+# No model chosen yet means nothing to serve.
+ConditionPathExists=/etc/ekido/assistant-engine.env
+
+[Service]
+User=ekido-llm
+# ASSISTANT_MODEL, set by `assistant-engine.sh use <model>`.
+EnvironmentFile=/etc/ekido/assistant-engine.env
+ExecStart=/opt/llama.cpp/bin/llama-server -m ${ASSISTANT_MODEL} --host 127.0.0.1 --port 8032 --threads 2 --ctx-size 4096 --parallel 1 --no-webui
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# The largest candidate (Gemma 4 E2B, Q4_0) is 2.8 GB on disk; the bake-off records real use and this is lowered after.
+MemoryMax=3.2G
+
+[Install]
+WantedBy=multi-user.target
