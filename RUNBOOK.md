@@ -165,6 +165,17 @@ sudo /opt/ekido/venv/bin/pip install '<package spec from pyproject.toml>'
 
 On 20 Nov, `fpdf2>=2.8,<3` (Platform's invoice PDFs) was installed this way. `pyrage` (core v0.4.3's encryption) is still needed before `deploy.json` moves to core v0.4.3.
 
+## Job keys (core v0.4.3, ticket A12)
+
+Each job gets its own age key. The coordinator keeps the secret half only **wrapped**, by KMS, and it refuses to start unless it knows how to wrap: there is no default and no throwaway key, because a wrapper that disappears on a restart would make every job's encrypted data unreadable, with no error until someone tried to read it. Before merging the coordinator change that adds this (ekido-coordinator #13), on **each** server:
+
+1. `sudo /opt/ekido/venv/bin/pip install 'pyrage==1.4.0'` (the autodeploy does not install packages; without it the coordinator restarts into an `ImportError`).
+2. Put `JOB_KEY_WRAP=kms` in `/etc/ekido/coordinator.env` (`KMS_KEY_ID` defaults to `alias/ekido-data` and `KMS_REGION` to `ap-south-1`). `staging.sh` adds the line to staging; on live add it by hand. Never leave it empty: `local` is only for a laptop or a test and needs `LOCAL_WRAP_IDENTITY` (an age secret key) as well.
+3. The server's role must be allowed `kms:Encrypt`, `kms:Decrypt`, `kms:GenerateDataKey` and `kms:DescribeKey` on the key. `aws/kms-hardening.sh` grants that to the role `ekido-server`; check that the staging instance uses a role that has it too (`aws iam get-instance-profile`), or the first job key fails.
+4. Restart and check: `sudo systemctl restart ekido-coordinator`, then `/readyz` must answer 200. A missing or bad setting shows up at once in `journalctl -u ekido-coordinator -n 20` as `JOB_KEY_WRAP must be set to 'kms' ...` (the message never prints a key).
+
+What this does not give you yet: deleting a job's key does not make **older database backups** unreadable, because every job key is wrapped by the same KMS key. That needs a key per customer (an open decision); until then say "removed from our live systems", not "unrecoverable".
+
 ## Restarting the server
 
 A full restart takes about 2 minutes; every service above starts on its own. The Elastic IP stays attached, so DNS keeps working.
