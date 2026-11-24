@@ -21,14 +21,34 @@ _sha_of() {  # _sha_of <owner/repo> <heads/x | tags/x | 40-char sha>
   echo "$out"
 }
 
+# Which environment this server is, from /etc/ekido/environment: "staging" (or the file absent) follows deploy.json, the
+# branches. "live" follows deploy.live.json, exact commits that only move through a reviewed promotion pull request
+# (tools/promote.py). Anything else is refused, never guessed.
+EKIDO_ENV_FILE="${EKIDO_ENV_FILE:-/etc/ekido/environment}"
+release_environment() {
+  local env; env=$(tr -d '[:space:]' < "$EKIDO_ENV_FILE" 2>/dev/null || true)
+  case "$env" in
+    ''|staging) echo staging ;;
+    live) echo live ;;
+    *) echo "unknown environment '$env' in $EKIDO_ENV_FILE (use staging or live)" >&2; return 1 ;;
+  esac
+}
+release_manifest_file() {
+  local env; env=$(release_environment) || return 1
+  if [ "$env" = live ]; then echo deploy.live.json; else echo deploy.json; fi
+}
+
 release_resolve() {
-  local out=$1 infra_ref="${2:-heads/main}" infra_sha manifest
+  local out=$1 infra_ref="${2:-heads/main}" infra_sha manifest mfile
+  mfile=$(release_manifest_file) || return 1
   infra_sha=$(_sha_of "$INFRA_REPO" "$infra_ref") || return 1
-  manifest=$(curl -fsSL --max-time 30 "https://raw.githubusercontent.com/$INFRA_REPO/$infra_sha/deploy.json") || return 1
+  manifest=$(curl -fsSL --max-time 30 "https://raw.githubusercontent.com/$INFRA_REPO/$infra_sha/$mfile") || return 1
   local resolved='[]' name repo ref sha entry
   while IFS= read -r entry; do
     name=$(jq -r .name <<<"$entry"); repo=$(jq -r .repo <<<"$entry"); ref=$(jq -r .ref <<<"$entry")
-    if [ "$repo" = "$INFRA_REPO" ]; then sha=$infra_sha; else sha=$(_sha_of "$repo" "$ref") || return 1; fi
+    # The infra repo follows the commit the manifest was read from, unless the manifest pins it to an exact commit
+    # (live does: infra is promoted like everything else).
+    if [ "$repo" = "$INFRA_REPO" ] && [[ ! "$ref" =~ ^[0-9a-f]{40}$ ]]; then sha=$infra_sha; else sha=$(_sha_of "$repo" "$ref") || return 1; fi
     resolved=$(jq --argjson e "$entry" --arg sha "$sha" '. + [$e + {sha: $sha}]' <<<"$resolved")
   done < <(jq -c '.repos[]' <<<"$manifest")
   jq -n --argjson r "$resolved" '{repos: $r}' > "$out"

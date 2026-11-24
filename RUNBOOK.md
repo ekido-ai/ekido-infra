@@ -221,3 +221,24 @@ sudo bash assistant-engine.sh status
 Platform reaches them through `ASSISTANT_GUARD_URL=http://127.0.0.1:8031` and `ASSISTANT_ENGINE_URL=http://127.0.0.1:8032` in `/etc/ekido/platform.env`. Without them, the assistant answers 503 (fail closed).
 
 **Disk:** on 24 Nov staging's root volume was grown from 30 to 49 GB, online, to hold the build and the bake-off candidates.
+
+## Staging and live: what each one runs, and how live moves
+
+Both servers run the same auto-deploy, but they follow different files (decision of 24 Nov 2026). Before this, both followed `deploy.json`, so every merge reached live within about 5 minutes.
+
+| | Follows | Moves when |
+|---|---|---|
+| **Staging** | `deploy.json`: each repo's `main` (core at its tag) | every green merge, within about 5 minutes |
+| **Live** | `deploy.live.json`: an exact commit for every repo | a promotion pull request is merged. Piyush's approval on it is the "haan" |
+
+Each server says which it is in `/etc/ekido/environment` (`staging` or `live`; a missing file means staging; any other word is refused, never guessed). `https://<host>/deploy/version.json` now shows `"environment"`.
+
+**To promote (put what staging runs onto live):**
+1. Check staging: the pages work, the PR evidence is in, the nightly privacy test is green.
+2. In `ekido-infra`: `python tools/promote.py`. It rewrites `deploy.live.json` from staging's `version.json` and prints a compare link for every repo that moves.
+3. Open a pull request with that file. Paste the printed list into it. Piyush approves it (CODEOWNERS), and merging it is the "haan".
+4. Within about 5 minutes live deploys exactly those commits, with the same checks as staging. `python tools/promote.py --check` shows whether live matches staging.
+
+**To roll back:** open a pull request that puts the previous commits back into `deploy.live.json` (`git revert` of the promotion).
+
+If `version.json` says `failed_sha`, the server refused that release: read `journalctl -u ekido-autodeploy` there, as under "Deploying".

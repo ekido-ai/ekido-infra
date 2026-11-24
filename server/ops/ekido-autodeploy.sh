@@ -185,8 +185,8 @@ fi
 # ── 5. Record it ────────────────────────────────────────────────────────────
 echo "$SHA" > "$STATE/deployed"
 rm -f "$STATE/failed"
-jq -n --arg sha "$SHA" --arg at "$(date -u +%FT%TZ)" --arg py "$PY" --arg web "$WEB" --slurpfile rel "$RELEASE" \
-  '{sha: $sha, deployed_at: $at, python: ($py == "yes"), web: ($web == "yes"),
+jq -n --arg sha "$SHA" --arg at "$(date -u +%FT%TZ)" --arg py "$PY" --arg web "$WEB" --arg env "$(release_environment 2>/dev/null || echo staging)" --slurpfile rel "$RELEASE" \
+  '{sha: $sha, environment: $env, deployed_at: $at, python: ($py == "yes"), web: ($web == "yes"),
     repos: ($rel[0].repos | map({key: .repo, value: .sha}) | from_entries)}' > "$PUBLIC/version.json.tmp"
 chmod 644 "$PUBLIC/version.json.tmp"; mv "$PUBLIC/version.json.tmp" "$PUBLIC/version.json"
 log "${SHA:0:7}: deployed"
