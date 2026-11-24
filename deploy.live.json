@@ -1,0 +1,130 @@
+{
+  "_about": "What live runs: exact commits, moved only by a reviewed promotion (tools/promote.py). Same checks and file map as deploy.json.",
+  "_promoted_from": {
+    "release": "259c0469d542",
+    "environment": null,
+    "deployed_at": "2026-11-24T06:30:30Z"
+  },
+  "repos": [
+    {
+      "name": "infra",
+      "repo": "ekido-ai/ekido-infra",
+      "ref": "30e6b20fdf96ee21982091a0de5dc63bd5091503",
+      "checks": [
+        "Scripts"
+      ],
+      "map": [
+        [
+          "server",
+          "infra/server"
+        ]
+      ]
+    },
+    {
+      "name": "core",
+      "repo": "ekido-ai/ekido-core",
+      "ref": "1df24a17692ad5487a58e39a2493ed99681d691e",
+      "checks": [],
+      "map": [
+        [
+          "packages/ekido_core",
+          "packages/ekido_core"
+        ]
+      ]
+    },
+    {
+      "name": "coordinator",
+      "repo": "ekido-ai/ekido-coordinator",
+      "ref": "b7834a2a58c74be2061359478cf8f0a828bf2929",
+      "checks": [
+        "Python (coordinator)",
+        "Postgres"
+      ],
+      "map": [
+        [
+          ".",
+          "apps/coordinator"
+        ],
+        [
+          "sepolia_coordinator.py",
+          "infra/server/sepolia_coordinator.py"
+        ]
+      ]
+    },
+    {
+      "name": "platform",
+      "repo": "ekido-ai/ekido-platform",
+      "ref": "953a77e0c10b57531c58a1d063aca8fe365baf13",
+      "checks": [
+        "Python (platform)",
+        "Postgres"
+      ],
+      "map": [
+        [
+          ".",
+          "apps/platform"
+        ]
+      ]
+    },
+    {
+      "name": "workers",
+      "repo": "ekido-ai/ekido-workers",
+      "ref": "873112461125779842984a727000db0e16f9f5e2",
+      "checks": [
+        "Python (agent)",
+        "Python (runtime)",
+        "Python (verifier)"
+      ],
+      "map": [
+        [
+          "agent",
+          "workers/agent"
+        ],
+        [
+          "runtime",
+          "workers/runtime"
+        ],
+        [
+          "verifier",
+          "workers/verifier"
+        ]
+      ]
+    },
+    {
+      "name": "inference",
+      "repo": "ekido-ai/ekido-inference",
+      "ref": "23c6bcf4b60c17e3dc85ff83d7cff6bc8cb980ca",
+      "checks": [
+        "Inference (Rust)"
+      ],
+      "map": [
+        [
+          "Cargo.toml",
+          "apps/inference/Cargo.toml"
+        ],
+        [
+          "Cargo.lock",
+          "apps/inference/Cargo.lock"
+        ],
+        [
+          "src",
+          "apps/inference/src"
+        ]
+      ]
+    },
+    {
+      "name": "web",
+      "repo": "ekido-ai/ekido-web",
+      "ref": "03d4e5f8176b10c3222b455abd91692863c62ca9",
+      "checks": [
+        "Web app"
+      ],
+      "map": [
+        [
+          ".",
+          "apps/web-combined"
+        ]
+      ]
+    }
+  ]
+}
