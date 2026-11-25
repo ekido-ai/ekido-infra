@@ -26,7 +26,12 @@ _sha_of() {  # _sha_of <owner/repo> <heads/x | tags/x | 40-char sha>
 # (tools/promote.py). Anything else is refused, never guessed.
 EKIDO_ENV_FILE="${EKIDO_ENV_FILE:-/etc/ekido/environment}"
 release_environment() {
-  local env; env=$(tr -d '[:space:]' < "$EKIDO_ENV_FILE" 2>/dev/null || true)
+  local env=""
+  # A missing file is normal (it means staging), so don't try to read it: the shell would log "No such file" on every run.
+  if [ -e "$EKIDO_ENV_FILE" ]; then
+    # A file that exists but cannot be read is refused: guessing "staging" would let a live server follow the branches.
+    env=$(tr -d '[:space:]' < "$EKIDO_ENV_FILE") || { echo "cannot read $EKIDO_ENV_FILE" >&2; return 1; }
+  fi
   case "$env" in
     ''|staging) echo staging ;;
     live) echo live ;;
