@@ -253,3 +253,23 @@ Each server says which it is in `/etc/ekido/environment` (`staging` or `live`; a
 **To roll back:** open a pull request that puts the previous commits back into `deploy.live.json` (`git revert` of the promotion).
 
 If `version.json` says `failed_sha`, the server refused that release: read `journalctl -u ekido-autodeploy` there, as under "Deploying".
+
+## Publishing a finished model (serving)
+
+`server/inference/publish_model.py` starts one llama.cpp engine per model on a loopback port (`ekido-engine@<id>`) and writes the manifest
+the Platform reads. A model is listed only after its engine answers. It refuses a GGUF whose SHA-256 differs from the one you give.
+
+```
+sudo python3 server/inference/publish_model.py publish --model-id <id> --job-id <job> --gguf <file> --sha256 <hex> --mode test
+sudo python3 server/inference/publish_model.py unpublish --model-id <id>    # hides it; deletes nothing
+sudo python3 server/inference/publish_model.py list
+```
+
+Once per server, before the first publish (not done yet on staging or live):
+1. Install the unit: copy `server/systemd/ekido-engine@.service` to `/etc/systemd/system/`, then `systemctl daemon-reload`.
+2. `llama-server` must be built (`assistant-engine.sh build`) and the user `ekido-llm` must exist.
+3. Platform: `INFERENCE_MODELS_ROOT=/var/lib/ekido-inference-models` and an `INFERENCE_INTERNAL_TOKEN` of 32 or more characters.
+4. Inference: `/etc/ekido/inference.env` with `EKIDO_INFERENCE_AUTHORITY_URL=http://127.0.0.1:8010` and the same token as
+   `EKIDO_INFERENCE_INTERNAL_TOKEN`.
+
+Memory: each engine may use up to 3 GB, so a server with 8 GB holds one or two besides everything else.
