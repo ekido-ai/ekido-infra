@@ -1,0 +1,26 @@
+[Unit]
+Description=Ekido model engine for %i (llama.cpp, loopback only)
+After=network-online.target
+Wants=network-online.target
+# Written by server/inference/publish_model.py.
+ConditionPathExists=/etc/ekido/engines/%i.env
+
+[Service]
+User=ekido-llm
+EnvironmentFile=/etc/ekido/engines/%i.env
+ExecStart=/opt/llama.cpp/bin/llama-server -m ${ENGINE_MODEL} --host 127.0.0.1 --port ${ENGINE_PORT} --threads 2 --ctx-size 2048 --parallel 1 --no-webui
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# Decision 7 of 24 Nov: serving within 3 GB.
+MemoryMax=3G
+
+[Install]
+WantedBy=multi-user.target
