@@ -57,6 +57,8 @@ release_resolve() {
     resolved=$(jq --argjson e "$entry" --arg sha "$sha" '. + [$e + {sha: $sha}]' <<<"$resolved")
   done < <(jq -c '.repos[]' <<<"$manifest")
   jq -n --argjson r "$resolved" '{repos: $r}' > "$out"
+  # Staging only, and only when the operator turned it on: a pull request labelled on-staging replaces that repo's commit (#161).
+  if [ "$mfile" = deploy.json ] && [ -e /etc/ekido/on-staging ] && [ -f /opt/ekido-ops/on_staging.py ]; then python3 -I /opt/ekido-ops/on_staging.py "$out" || true; fi
 }
 
 release_id() {

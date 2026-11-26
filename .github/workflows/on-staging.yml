@@ -1,0 +1,42 @@
+# Reusable check for pull requests labelled on-staging (ekido-internal #161). A repo calls it from a pull_request workflow
+# with types [labeled, synchronize, edited, reopened] and makes the job a required check.
+name: on-staging
+
+on:
+  workflow_call:
+    inputs:
+      staging_url:
+        required: false
+        type: string
+        default: https://ekido-staging.duckdns.org
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check:
+    name: Runs on staging
+    if: contains(github.event.pull_request.labels.*.name, 'on-staging')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          repository: ekido-ai/ekido-infra
+          ref: main
+      - name: Say where to look
+        if: github.event.action == 'labeled'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          URL: ${{ inputs.staging_url }}
+        run: gh pr comment "$PR" -R "$REPO" --body "Queued for staging: $URL (it deploys within a few minutes if this is first in line). Re-run this check once the screenshots are in."
+      - name: Staging runs this commit and the report shows it
+        env:
+          REPO: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          STAGING_URL: ${{ inputs.staging_url }}
+        run: python3 -I tools/on_staging_check.py
