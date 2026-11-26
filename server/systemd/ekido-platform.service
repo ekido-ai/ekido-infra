@@ -15,6 +15,8 @@ Environment=DATABASE_URL=sqlite:////var/lib/ekido-platform/platform.db
 # Not secret: SITE_URL, EMAIL_SENDER, EMAIL_FROM, CORS_ORIGINS.
 EnvironmentFile=-/etc/ekido/platform.env
 EnvironmentFile=-/etc/ekido/database-platform.env
+# Optional cache (valkey.sh writes it). Without the file the Platform runs without a cache.
+EnvironmentFile=-/etc/ekido/valkey.env
 # Root-owned inference authority configuration and shared secret.
 EnvironmentFile=-/etc/ekido/inference-platform.env
 ExecStartPre=/bin/sh -c '[ -s /etc/ekido/database-platform.env ] || exit 0; exec /opt/ekido/venv/bin/python -m alembic -c alembic/alembic.ini upgrade head'

@@ -32,3 +32,5 @@ jobs:
           CADDY_BIN=/tmp/caddy-test/caddy python -m unittest discover -s server/tests -p 'test_caddy_inference_routes.py' -v
       - name: Verify the release and promotion rules (staging follows branches, live follows pinned commits)
         run: python -m unittest discover -s server/tests -p 'test_release_manifest.py' -v
+      - name: Deploy files carry what the services need
+        run: python -m unittest discover -s server/tests -p 'test_*deploy.py' -v
