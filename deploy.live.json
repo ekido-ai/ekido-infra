@@ -115,7 +115,7 @@
     {
       "name": "web",
       "repo": "ekido-ai/ekido-web",
-      "ref": "ab31e798a8c3770abe81e820208268c0f604d102",
+      "ref": "de210ce84a1e0c8dbbf72d017827ccabcc766f5c",
       "checks": [
         "Web app"
       ],
