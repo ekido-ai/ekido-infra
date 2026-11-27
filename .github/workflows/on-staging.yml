@@ -32,7 +32,8 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
           URL: ${{ inputs.staging_url }}
-        run: gh pr comment "$PR" -R "$REPO" --body "Queued for staging: $URL (it deploys within a few minutes if this is first in line). Re-run this check once the screenshots are in."
+        run: |
+          gh pr comment "$PR" -R "$REPO" --body "Queued for staging: $URL (it deploys within a few minutes if this is first in line). Re-run this check once the screenshots are in."
       - name: Staging runs this commit and the report shows it
         env:
           REPO: ${{ github.repository }}
