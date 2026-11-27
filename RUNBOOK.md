@@ -268,6 +268,16 @@ Each server says which it is in `/etc/ekido/environment` (`staging` or `live`; a
 
 If `version.json` says `failed_sha`, the server refused that release: read `journalctl -u ekido-autodeploy` there, as under "Deploying".
 
+## The `on-staging` label
+
+Off until an operator turns it on, and **only after every organisation member has GitHub two-factor sign-in**: anyone who can label and push can run code on staging.
+
+With it on, staging runs the commit of an open pull request labelled `on-staging` instead of that repo's `main`: one per repo, lowest number first. The commit's own CI must be green. Refused: forks, drafts, other bases, `ekido-infra`, and changes to migrations or dependencies. Removing the label or closing the pull request puts `main` back at the next run. `journalctl -u ekido-autodeploy` shows what was chosen or refused.
+
+Turn on (staging only): `sudo install -m 0755 /opt/ekido/infra-checkout/server/ops/on_staging.py /opt/ekido-ops/on_staging.py && sudo touch /etc/ekido/on-staging` (adjust the source path to where the infra files are). Turn off: `sudo rm /etc/ekido/on-staging`. The script is not updated by the auto-deploy; install it again after a change.
+
+In each repo: call `ekido-ai/ekido-infra/.github/workflows/on-staging.yml@main` from a `pull_request` workflow (types `labeled`, `synchronize`, `edited`, `reopened`) and make "Runs on staging" a required check.
+
 ## Publishing a finished model (serving)
 
 `server/inference/publish_model.py` starts one llama.cpp engine per model on a loopback port (`ekido-engine@<id>`) and writes the manifest
