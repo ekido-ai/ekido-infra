@@ -176,6 +176,20 @@ Each job gets its own age key. The coordinator keeps the secret half only **wrap
 
 What this does not give you yet: deleting a job's key does not make **older database backups** unreadable, because every job key is wrapped by the same KMS key. That needs a key per customer (an open decision); until then say "removed from our live systems", not "unrecoverable".
 
+## Cache (Valkey)
+
+The Platform can use Valkey on the same server as a cache (ekido-internal #142): who an API key or session belongs to, the assistant's rate limits, and webhooks already handled. Postgres stays the source of truth. If Valkey is stopped, full or broken, the Platform keeps working from the database.
+
+To turn it on, after the Platform code that reads `VALKEY_URL` is deployed:
+
+1. `sudo /opt/ekido/venv/bin/pip install 'redis>=5,<7'` (first: with `VALKEY_URL` set and no client library, the Platform does not start).
+2. `sudo bash /opt/ekido/server/valkey.sh` (localhost only, password, 256 MB, least recently used dropped first, nothing on disk).
+3. `sudo systemctl daemon-reload && sudo systemctl restart ekido-platform`, then `/readyz` must answer 200.
+
+To turn it off: move `/etc/ekido/valkey.env` aside and restart the Platform.
+
+A revoked key, a sign-out and "delete my data" take effect at once. The one exception: if Valkey cannot be reached at the moment of the revoke, a remembered entry can still work for up to 30 seconds after it comes back.
+
 ## Restarting the server
 
 A full restart takes about 2 minutes; every service above starts on its own. The Elastic IP stays attached, so DNS keeps working.

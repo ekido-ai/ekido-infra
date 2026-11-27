@@ -34,3 +34,5 @@ jobs:
         run: python -m unittest discover -s server/tests -p 'test_release_manifest.py' -v
       - name: The on-staging queue and its check
         run: python -m unittest discover -s server/tests -p 'test_on_staging.py' -v
+      - name: Deploy files carry what the services need
+        run: python -m unittest discover -s server/tests -p 'test_*deploy.py' -v
