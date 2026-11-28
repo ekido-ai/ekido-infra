@@ -16,7 +16,9 @@
 # agents keep using API_HOST.
 # The host names come from /etc/ekido/site.env (SITE_HOST, API_HOST) through a caddy drop-in, and default to the
 # live names, so a staging server serves the same layout under its own names.
-{$API_HOST:gpuchain.duckdns.org}, {$SITE_HOST:ekido.duckdns.org} {
+# EXTRA_HOSTS in site.env adds more names that serve the same thing, for moving to a new domain without turning the old one off.
+# It starts with a comma: EXTRA_HOSTS=", example.com, api.example.com". Empty by default. A name needs its DNS record first.
+{$API_HOST:gpuchain.duckdns.org}, {$SITE_HOST:ekido.duckdns.org}{$EXTRA_HOSTS:} {
 	import secure
 	encode gzip
 	# The commit the server is running, published by infra/server/ops/ekido-autodeploy.sh.
