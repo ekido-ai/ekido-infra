@@ -40,7 +40,7 @@ class CaddyRoutes(unittest.TestCase):
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]
         text = (Path(__file__).resolve().parents[1] / 'Caddyfile').read_text(encoding='utf-8')
-        text = text.replace('{$API_HOST:gpuchain.duckdns.org}, {$SITE_HOST:ekido.duckdns.org}', f'http://127.0.0.1:{port}')
+        text = text.replace('{$API_HOST:api.ekido.xyz}, {$SITE_HOST:ekido.xyz}', f'http://127.0.0.1:{port}')
         for original, name in ((8010, 'platform'), (8020, 'inference'), (8003, 'coordinator')):
             text = text.replace(f'127.0.0.1:{original}', f'127.0.0.1:{services[name]}')
         with tempfile.TemporaryDirectory() as temp:

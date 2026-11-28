@@ -23,12 +23,12 @@ jobs:
     steps:
       - name: API is ready
         run: |
-          body=$(curl -sS --max-time 20 --retry 2 --retry-delay 10 https://gpuchain.duckdns.org/sepolia/readyz)
+          body=$(curl -sS --max-time 20 --retry 2 --retry-delay 10 https://api.ekido.xyz/sepolia/readyz)
           echo "$body" | jq -c '{status, failing: [.checks | to_entries[] | select(.value.ok | not) | {(.key): .value.detail}]}'
           echo "$body" | jq -e '.status == "ready"' >/dev/null
       - name: Site pages answer
         run: |
           for p in / /chain /provide; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 --retry 2 --retry-delay 10 "https://ekido.duckdns.org$p")
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 --retry 2 --retry-delay 10 "https://ekido.xyz$p")
             echo "$p $code"; [ "$code" = 200 ]
           done

@@ -10,7 +10,7 @@
 #   SSM SecureString parameters /ekido/server/{sepolia.env,sepolia-verifier-1.env,sepolia-verifier-2.env}, written
 #   to /etc/ekido/{coordinator.env,verifier-1.env,verifier-2.env}, and /ekido/server/smoke-provider.key if present
 # Secrets are written straight to their files with mode 600 and never printed.
-# The smoke provider is not started here: it dials wss://gpuchain.duckdns.org, so it starts once DNS points here.
+# The smoke provider is not started here: it dials wss://api.ekido.xyz, so it starts once DNS points here.
 set -euo pipefail
 BUCKET="${1:?usage: restore.sh <bucket> [checkpoint-bucket]}"
 CHECKPOINT_BUCKET="${2:-}"

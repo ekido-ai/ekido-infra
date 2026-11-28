@@ -1,6 +1,6 @@
 """Read-only checks to run just before showing the live network. Sends GET requests only and uses no key.
 
-    python infra/live_preflight.py                      # https://gpuchain.duckdns.org
+    python infra/live_preflight.py                      # https://api.ekido.xyz
     python infra/live_preflight.py --host example.org   # another host
     python infra/live_preflight.py --min-providers 3    # when friends have joined
 
@@ -38,7 +38,7 @@ def get(url: str, timeout: float = 20):
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default="gpuchain.duckdns.org")
+    parser.add_argument("--host", default="api.ekido.xyz")
     parser.add_argument("--min-providers", type=int, default=2)
     args = parser.parse_args()
     base = f"https://{args.host}"

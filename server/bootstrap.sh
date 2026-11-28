@@ -73,8 +73,8 @@ rsync -a --delete --exclude target "$SRC/apps/inference/" "$APP/apps/inference/"
 install -m 0755 /var/cache/ekido-inference-build/release/ekido-inference /opt/ekido/bin/ekido-inference
 
 echo "== dashboard"
-SITE_HOST=ekido.duckdns.org
-API_HOST=gpuchain.duckdns.org
+SITE_HOST=ekido.xyz
+API_HOST=api.ekido.xyz
 [ -f /etc/ekido/site.env ] && . /etc/ekido/site.env   # A staging server sets its own names here.
 mkdir -p "$WEB"
 rsync -a --delete --exclude node_modules --exclude .next "$SRC/apps/web-combined/" "$WEB/"
