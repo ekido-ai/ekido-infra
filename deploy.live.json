@@ -54,7 +54,7 @@
     {
       "name": "platform",
       "repo": "ekido-ai/ekido-platform",
-      "ref": "d4a6ee26440adb1fabdd70b7444efab36d8fa4c0",
+      "ref": "77309b07f10f2e5257066ec750d945c5fd30f16f",
       "checks": [
         "Python (platform)",
         "Postgres"
