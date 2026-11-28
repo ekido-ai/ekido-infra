@@ -1,15 +1,15 @@
 {
   "_about": "What live runs: exact commits, moved only by a reviewed promotion (tools/promote.py). Same checks and file map as deploy.json.",
   "_promoted_from": {
-    "release": "582500825bed",
+    "release": "bab58c4cccd7",
     "environment": "staging",
-    "deployed_at": "2026-11-28T14:28:44Z"
+    "deployed_at": "2026-11-28T17:27:44Z"
   },
   "repos": [
     {
       "name": "infra",
       "repo": "ekido-ai/ekido-infra",
-      "ref": "e9e8a755ce103fa3f2d34e0aac2da8ae865d2350",
+      "ref": "0093cdbfbd05f20469a0f007ae853298c2cae4b8",
       "checks": [
         "Scripts"
       ],
@@ -23,7 +23,7 @@
     {
       "name": "core",
       "repo": "ekido-ai/ekido-core",
-      "ref": "85fba67e0d9acd4ba7560966e2742b233dc4b346",
+      "ref": "4f961d32d43addc7f38e19fcdf8cf29f33a9d010",
       "checks": [],
       "map": [
         [
@@ -35,7 +35,7 @@
     {
       "name": "coordinator",
       "repo": "ekido-ai/ekido-coordinator",
-      "ref": "15a933a8c36badc15d6ed3b8697e674e410685d6",
+      "ref": "26e05209abcb82ee6938fe9827ed6d12ad81966c",
       "checks": [
         "Python (coordinator)",
         "Postgres"
@@ -54,7 +54,7 @@
     {
       "name": "platform",
       "repo": "ekido-ai/ekido-platform",
-      "ref": "d1a5edf22dca6db0e9e92cd871b45b962f10091f",
+      "ref": "d4a6ee26440adb1fabdd70b7444efab36d8fa4c0",
       "checks": [
         "Python (platform)",
         "Postgres"
@@ -69,7 +69,7 @@
     {
       "name": "workers",
       "repo": "ekido-ai/ekido-workers",
-      "ref": "d8733ca9842b723f25f295c1a940dbeb1be3ec46",
+      "ref": "269a4899a81f757d3bf3a8d04ae8062239194da9",
       "checks": [
         "Python (agent)",
         "Python (runtime)",
@@ -115,7 +115,7 @@
     {
       "name": "web",
       "repo": "ekido-ai/ekido-web",
-      "ref": "41d6345968c2a73e5bffb090c6ab8586c67782fe",
+      "ref": "e73fa654fae82deb9c0a8521fb1ddb23840314ba",
       "checks": [
         "Web app"
       ],
