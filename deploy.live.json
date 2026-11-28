@@ -1,15 +1,15 @@
 {
   "_about": "What live runs: exact commits, moved only by a reviewed promotion (tools/promote.py). Same checks and file map as deploy.json.",
   "_promoted_from": {
-    "release": "d8283ce1489c",
+    "release": "582500825bed",
     "environment": "staging",
-    "deployed_at": "2026-11-27T18:43:31Z"
+    "deployed_at": "2026-11-28T14:28:44Z"
   },
   "repos": [
     {
       "name": "infra",
       "repo": "ekido-ai/ekido-infra",
-      "ref": "8519e5be28f4b487fff65145a1adf4b6d4ba86be",
+      "ref": "e9e8a755ce103fa3f2d34e0aac2da8ae865d2350",
       "checks": [
         "Scripts"
       ],
@@ -54,7 +54,7 @@
     {
       "name": "platform",
       "repo": "ekido-ai/ekido-platform",
-      "ref": "0fb1a6c3da1ad47ce56624c37fbf20082587cb43",
+      "ref": "d1a5edf22dca6db0e9e92cd871b45b962f10091f",
       "checks": [
         "Python (platform)",
         "Postgres"
@@ -115,7 +115,7 @@
     {
       "name": "web",
       "repo": "ekido-ai/ekido-web",
-      "ref": "2f5b1e79bc265f1bc8d9aa815e88f2929fd84f8e",
+      "ref": "41d6345968c2a73e5bffb090c6ab8586c67782fe",
       "checks": [
         "Web app"
       ],
