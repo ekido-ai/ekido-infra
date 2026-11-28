@@ -11,7 +11,7 @@ StateDirectory=ekido-smoke-provider
 WorkingDirectory=/opt/ekido
 Environment=PYTHONPATH=/opt/ekido/workers/agent:/opt/ekido/workers/runtime:/opt/ekido/packages/ekido_core
 # The API host comes from /etc/ekido/site.env on a staging server; the live name is the default.
-Environment=API_HOST=gpuchain.duckdns.org
+Environment=API_HOST=api.ekido.xyz
 EnvironmentFile=-/etc/ekido/site.env
 ExecStart=/opt/ekido/venv/bin/python -m ekido_agent.join --coordinator wss://${API_HOST}/sepolia --name "Sepolia CPU verification" --price 0.001 --device cpu --workdir /var/lib/ekido-smoke-provider/work --key-file /var/lib/ekido-smoke-provider/provider.key
 Restart=always

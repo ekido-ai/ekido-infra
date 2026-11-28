@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Turns a server built by bootstrap.sh into a staging server. Run once as root, for example through SSM:
-#   bash staging.sh <site-host> <api-host>        # e.g. ekido-staging.duckdns.org ekido-staging-api.duckdns.org
+#   bash staging.sh <site-host> <api-host>        # e.g. staging.ekido.xyz staging-api.ekido.xyz
 #
 # Staging is disposable and separate from live:
 #   - its own host names (/etc/ekido/site.env), read by Caddy, the web build, the monitor and the smoke provider;

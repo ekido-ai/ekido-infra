@@ -56,7 +56,7 @@ echo "== 2. stop the services that write"
 systemctl stop "${WRITERS[@]}"
 
 echo "== 3. bootstrap from the release"
-[ -s /etc/ekido/platform.env ] || printf 'SITE_URL=https://ekido.duckdns.org\nEMAIL_SENDER=log\nCORS_ORIGINS=["https://ekido.duckdns.org"]\n' > /etc/ekido/platform.env
+[ -s /etc/ekido/platform.env ] || printf 'SITE_URL=https://ekido.xyz\nEMAIL_SENDER=log\nCORS_ORIGINS=["https://ekido.xyz"]\n' > /etc/ekido/platform.env
 curl -fsSL "$RAW/bootstrap.sh" | tr -d '\r' > /root/bootstrap.sh
 bash /root/bootstrap.sh "$INFRA_SHA" > /var/log/ekido-bootstrap-split.log 2>&1 || { tail -20 /var/log/ekido-bootstrap-split.log; echo "bootstrap failed; services stay stopped, restore from $KEEP"; exit 1; }
 tail -3 /var/log/ekido-bootstrap-split.log
@@ -94,7 +94,7 @@ for port in 8003 8010; do echo "readyz $port: $(curl -s -o /dev/null -w '%{http_
 echo "inference: $(curl -s --max-time 5 http://127.0.0.1:8020/healthz)"
 echo "jobs via the API: $(curl -sf --max-time 10 'http://127.0.0.1:8003/jobs?limit=1000' | jq length)"
 systemctl is-active ekido-coordinator ekido-platform ekido-inference ekido-verifier@1 ekido-verifier@2 ekido-web ekido-smoke-provider caddy | tr '\n' ' '; echo
-echo "site: $(curl -s -o /dev/null -w '%{http_code}' --max-time 20 https://ekido.duckdns.org/)  api: $(curl -s -o /dev/null -w '%{http_code}' --max-time 20 https://gpuchain.duckdns.org/sepolia/readyz)"
+echo "site: $(curl -s -o /dev/null -w '%{http_code}' --max-time 20 https://ekido.xyz/)  api: $(curl -s -o /dev/null -w '%{http_code}' --max-time 20 https://api.ekido.xyz/sepolia/readyz)"
 [ "$rc" = 0 ] || { echo "RESULT: copy failed, running on SQLite; backups in $KEEP"; exit 1; }
 for port in 8003 8010; do
   [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "http://127.0.0.1:$port/readyz")" = 200 ] || { echo "RESULT: copied, but $port is not ready; auto-deploy left off; backups in $KEEP"; exit 1; }

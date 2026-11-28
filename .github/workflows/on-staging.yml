@@ -8,7 +8,7 @@ on:
       staging_url:
         required: false
         type: string
-        default: https://ekido-staging.duckdns.org
+        default: https://staging.ekido.xyz
 
 permissions:
   contents: read

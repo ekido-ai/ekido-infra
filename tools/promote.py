@@ -22,7 +22,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-STAGING = "https://ekido-staging.duckdns.org/deploy/version.json"
+STAGING = "https://staging.ekido.xyz/deploy/version.json"
 SHA = re.compile(r"^[0-9a-f]{40}$")
 
 

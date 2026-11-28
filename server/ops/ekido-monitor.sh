@@ -11,8 +11,8 @@ code=${ready##*$'\n'}; body=${ready%$'\n'*}
 for svc in ekido-coordinator ekido-verifier@1 ekido-verifier@2 ekido-web ekido-smoke-provider caddy; do
   systemctl is-active --quiet "$svc" || problems+=("service $svc is $(systemctl is-active "$svc")")
 done
-SITE_HOST=ekido.duckdns.org
-API_HOST=gpuchain.duckdns.org
+SITE_HOST=ekido.xyz
+API_HOST=api.ekido.xyz
 [ -f /etc/ekido/site.env ] && . /etc/ekido/site.env   # A staging server sets its own names here.
 for url in "https://$SITE_HOST/" "https://$API_HOST/sepolia/healthz"; do
   c=$(curl -s -o /dev/null -m 15 -w '%{http_code}' "$url"); [ "$c" = "200" ] || problems+=("$url answered $c")

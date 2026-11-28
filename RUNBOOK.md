@@ -4,7 +4,7 @@ How the hosted Base Sepolia network is run, checked, backed up and restored. Eve
 
 ## What runs where
 
-One AWS EC2 instance (`ekido-server`, `m7i-flex.large`, Mumbai `ap-south-1`, Elastic IP `13.203.167.11`) runs these systemd units, all enabled at boot. Both `ekido.duckdns.org` (the site) and `gpuchain.duckdns.org` (the API and provider endpoint) point at it. It moved here from Google Cloud on 15 Nov 2026; `infra/server/bootstrap.sh` and `infra/server/restore.sh` rebuild it from scratch.
+One AWS EC2 instance (`ekido-server`, `m7i-flex.large`, Mumbai `ap-south-1`, Elastic IP `13.203.167.11`) runs these systemd units, all enabled at boot. Both `ekido.xyz` (the site) and `api.ekido.xyz` (the API and provider endpoint) point at it. It moved here from Google Cloud on 15 Nov 2026; `infra/server/bootstrap.sh` and `infra/server/restore.sh` rebuild it from scratch.
 
 | Unit | What it is |
 |---|---|
@@ -25,8 +25,8 @@ There is no SSH: the security group opens only ports 80 and 443. Run commands th
 ## Is it healthy?
 
 ```bash
-curl -s https://gpuchain.duckdns.org/sepolia/readyz      # "status": "ready", with one entry per check
-curl -s https://gpuchain.duckdns.org/sepolia/providers   # the smoke provider should be ONLINE
+curl -s https://api.ekido.xyz/sepolia/readyz      # "status": "ready", with one entry per check
+curl -s https://api.ekido.xyz/sepolia/providers   # the smoke provider should be ONLINE
 ```
 
 `/readyz` checks the database, artifact storage and free space, the chain RPC's latest block age, the coordinator's gas balance and the settlement backlog. It returns 503 when any check fails.
@@ -119,7 +119,7 @@ Merging into `main` deploys itself. Every 5 minutes `ekido-autodeploy.timer` run
    - **Python services:** waits while any job is unfinished, backs up the running code, swaps it, restarts, and puts the old code back if `/readyz` isn't ready within a minute.
    - **Web app:** `ekido-web-deploy.sh` rebuilds it, keeping the previous build and restoring it if a build fails.
 4. Installs web dependency changes with `npm ci` (CI has already built with the new lockfile), keeping the old `node_modules` to put back if anything fails. Python dependency changes (`pyproject.toml`) are refused; deploy those by hand.
-5. Publishes the running commit at `https://gpuchain.duckdns.org/deploy/version.json` (plus `failed_sha` and the reason when a deploy is refused).
+5. Publishes the running commit at `https://api.ekido.xyz/deploy/version.json` (plus `failed_sha` and the reason when a deploy is refused).
 
 The **Deploy** workflow in GitHub Actions waits for that file to show the merged commit, then checks `/readyz` and the main pages; it fails, and GitHub emails you, if the server refused the deploy.
 

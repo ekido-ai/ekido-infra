@@ -74,8 +74,8 @@ deploy() {
     fi
   fi
 }
-SITE_HOST=ekido.duckdns.org
-API_HOST=gpuchain.duckdns.org
+SITE_HOST=ekido.xyz
+API_HOST=api.ekido.xyz
 [ -f /etc/ekido/site.env ] && . /etc/ekido/site.env   # A staging server sets its own names here.
 deploy /opt/ekido/web ekido-web \
   NEXT_PUBLIC_COORDINATOR_URL="https://$SITE_HOST/sepolia" \
