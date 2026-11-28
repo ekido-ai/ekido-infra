@@ -2,7 +2,7 @@
 # Rebuilds the web app from a source archive. Used by ekido-autodeploy.sh and by hand.
 #   ekido-web-deploy.sh /path/to/web-src.tgz          # src, next.config.ts, public (and messages, when the archive has it)
 #   ekido-web-deploy.sh /path/to/web-src.tgz deps     # also package.json and package-lock.json, then npm ci
-# The previous src, .next, next.config.ts (and with deps, node_modules and the package files) are kept outside the
+# The previous src, public, .next, next.config.ts (and with deps, node_modules and the package files) are kept outside the
 # app, never deleted. A service is restarted only after its build succeeds; otherwise everything is put back.
 # Exits non-zero if any app failed.
 set -u
@@ -26,6 +26,8 @@ deploy() {
   as cp -a .next "$bk/.next.bak-$STAMP"
   as cp next.config.ts "$bk/next.config.ts.bak-$STAMP"
   as mv src "$bk/src.replaced-$STAMP"
+  # public/ is replaced whole, not extracted over: otherwise a file deleted from the repository stays on the site.
+  [ -e public ] && as cp -a public "$bk/public.bak-$STAMP" && as mv public "$bk/public.replaced-$STAMP"
   local files=(src next.config.ts public)
   # The site text (next-intl) lives in messages/. Older archives don't have it, so it's optional.
   local msgs=no
@@ -56,6 +58,8 @@ deploy() {
     FAILED=1
     echo "restoring the previous version"
     as mv src "$bk/src.failed-$STAMP"; as cp -a "$bk/src.bak-$STAMP" src
+    [ -e public ] && as mv public "$bk/public.failed-$STAMP"
+    [ -e "$bk/public.bak-$STAMP" ] && as cp -a "$bk/public.bak-$STAMP" public
     if [ "$msgs" = yes ]; then
       [ -e messages ] && as mv messages "$bk/messages.failed-$STAMP"
       [ -e "$bk/messages.bak-$STAMP" ] && as cp -a "$bk/messages.bak-$STAMP" messages
